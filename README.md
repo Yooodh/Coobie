@@ -1,6 +1,6 @@
 Coobie (쿠비)
 <div align="center">
-  <img src="./public/images/쿠비icon.png" alt="Coobie 로고" width="200"/>
+  <img src="./coobie/public/images/쿠비icon.png" alt="Coobie 로고" width="200"/>
   <p><i>언제 어디서나 팀과 연결되세요.</i></p>
 </div>
 
