@@ -6,7 +6,7 @@ export class Schedule {
     userId: string,
     startAt: Date,
     date: Date,
-    deleteAt: Date | null,
+    deletedAt: Date | null,
     scheduleCategoryId: number,
     category?: ScheduleCategory // optional relation
   ) {}
