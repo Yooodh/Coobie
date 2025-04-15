@@ -4,6 +4,6 @@ export class Company {
     companyName: string,
     businessNumber: string,
     isLocked: boolean,
-    deleteAt: Date
+    deletedAt: Date
   ) {}
 }
