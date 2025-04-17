@@ -14,11 +14,6 @@ interface Position {
   positionName: string;
 }
 
-interface Role {
-  id: string;
-  roleName: string;
-}
-
 export default function CreateUserPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -32,15 +27,13 @@ export default function CreateUserPage() {
     confirmPassword: "",
     departmentId: "",
     positionId: "",
-    roleId: "",
   });
   
   // 선택 목록 데이터
   const [departments, setDepartments] = useState<Department[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
 
-  // 부서, 직급, 역할 데이터 가져오기
+  // 부서, 직급 데이터 가져오기
   useEffect(() => {
     const fetchOptions = async () => {
       try {
@@ -56,13 +49,6 @@ export default function CreateUserPage() {
         if (posResponse.ok) {
           const posData = await posResponse.json();
           setPositions(posData);
-        }
-        
-        // 역할 목록 가져오기
-        const roleResponse = await fetch('/api/roles');
-        if (roleResponse.ok) {
-          const roleData = await roleResponse.json();
-          setRoles(roleData);
         }
       } catch (err: any) {
         console.error("옵션 데이터를 불러오는 중 오류 발생:", err);
@@ -95,19 +81,20 @@ export default function CreateUserPage() {
     }
     
     try {
-      // 사용자 생성 API 호출
+      // 사용자 생성 API 호출 (ID 필드 없이)
       const response = await fetch('/api/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          // id 필드 제외 - Supabase가 자동 생성
           username: formData.username,
           nickname: formData.nickname,
           password: formData.password,
           departmentId: formData.departmentId ? parseInt(formData.departmentId) : undefined,
           positionId: formData.positionId ? parseInt(formData.positionId) : undefined,
-          roleId: formData.roleId || undefined,
+          roleId: "02", // 사원 역할 ID 고정
         }),
       });
       
@@ -246,27 +233,6 @@ export default function CreateUserPage() {
                 {positions.map((pos) => (
                   <option key={pos.id} value={pos.id}>
                     {pos.positionName}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            {/* 역할 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                역할 *
-              </label>
-              <select
-                name="roleId"
-                value={formData.roleId}
-                onChange={handleChange}
-                required
-                className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">선택하세요</option>
-                {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.roleName}
                   </option>
                 ))}
               </select>
