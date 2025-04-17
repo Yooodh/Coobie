@@ -2,7 +2,7 @@ import { User } from "@/domain/entities/User";
 import { UserRepository } from "@/domain/repositories/UserRepository";
 import { UserFilter } from "@/domain/repositories/filters/UserFilter";
 
-export class GetUserUsecase {
+export class GetUserUseCase {
   constructor(private userRepository: UserRepository) {}
 
   async getById(id: string): Promise<User | null> {
