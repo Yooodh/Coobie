@@ -1,3 +1,3 @@
 export class ScheduleCategory {
-  constructor(id: number, scheduleType: string) {}
+  constructor(public id: number, public scheduleType: string) {}
 }
