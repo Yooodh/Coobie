@@ -2,16 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { User } from "@/domain/entities/User";
-
-interface Department {
-  id: number;
-  departmentName: string;
-}
-
-interface Position {
-  id: number;
-  positionName: string;
-}
+import { Department } from "@/domain/entities/Department";
+import { Position } from "@/domain/entities/Position";
 
 export default function UserManagementPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -36,19 +28,19 @@ export default function UserManagementPage() {
   const fetchDepartmentsAndPositions = async () => {
     try {
       // 부서 데이터 가져오기
-      const deptResponse = await fetch('/api/departments');
+      const deptResponse = await fetch("/api/departments");
       if (deptResponse.ok) {
         const deptData = await deptResponse.json();
         setDepartments(deptData);
       }
 
       // 직급 데이터 가져오기
-      const posResponse = await fetch('/api/positions');
+      const posResponse = await fetch("/api/positions");
       if (posResponse.ok) {
         const posData = await posResponse.json();
         setPositions(posData);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("부서 및 직급 데이터 로딩 실패:", err);
     }
   };
@@ -85,12 +77,16 @@ export default function UserManagementPage() {
 
       const data = await response.json();
       console.log("API 응답 데이터:", data);
-      
+
       setUsers(data.users || []);
       setTotalPages(data.totalPages || 1);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("API 오류:", err);
-      setError(err.message || "사용자 목록을 불러오는데 실패했습니다");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "사용자 목록을 불러오는데 실패했습니다"
+      );
     } finally {
       setLoading(false);
     }
@@ -109,14 +105,14 @@ export default function UserManagementPage() {
   // 부서 ID를 부서 이름으로 변환
   const getDepartmentName = (departmentId: number | undefined): string => {
     if (!departmentId) return "-";
-    const department = departments.find(d => d.id === departmentId);
+    const department = departments.find((d) => d.id === departmentId);
     return department ? department.departmentName : `부서 ${departmentId}`;
   };
 
   // 직급 ID를 직급 이름으로 변환
   const getPositionName = (positionId: number | undefined): string => {
     if (!positionId) return "-";
-    const position = positions.find(p => p.id === positionId);
+    const position = positions.find((p) => p.id === positionId);
     return position ? position.positionName : `직급 ${positionId}`;
   };
 
@@ -137,8 +133,12 @@ export default function UserManagementPage() {
 
         alert("비밀번호가 성공적으로 재설정되었습니다");
         fetchUsers(); // 목록 새로고침
-      } catch (err: any) {
-        alert(`비밀번호 재설정 실패: ${err.message}`);
+      } catch (err: unknown) {
+        alert(
+          `비밀번호 재설정 실패: ${
+            err instanceof Error ? err.message : "알 수 없는 오류"
+          }`
+        );
       }
     }
   };
@@ -161,8 +161,12 @@ export default function UserManagementPage() {
         `사용자가 성공적으로 ${!currentStatus ? "잠금" : "잠금 해제"}되었습니다`
       );
       fetchUsers(); // 목록 새로고침
-    } catch (err: any) {
-      alert(`잠금 상태 업데이트 실패: ${err.message}`);
+    } catch (err: unknown) {
+      alert(
+        `잠금 상태 업데이트 실패: ${
+          err instanceof Error ? err.message : "알 수 없는 오류"
+        }`
+      );
     }
   };
 
@@ -182,12 +186,16 @@ export default function UserManagementPage() {
         }
 
         // 삭제 성공 시 UI에서 해당 사용자 즉시 제거
-        setUsers((prevUsers) => prevUsers.filter(user => user.id !== userId));
-        
+        setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userId));
+
         alert("사용자가 성공적으로 삭제되었습니다");
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("사용자 삭제 오류:", err);
-        alert(`사용자 삭제 실패: ${err.message}`);
+        alert(
+          `사용자 삭제 실패: ${
+            err instanceof Error ? err.message : "알 수 없는 오류"
+          }`
+        );
       }
     }
   };
@@ -201,16 +209,28 @@ export default function UserManagementPage() {
     setCurrentPage(1);
   };
 
-  const tabs = ["검색옵션", "전체", "이름", "아이디", "직급", "소속부서", "임시일자", "퇴사자"];
+  const tabs = [
+    "검색옵션",
+    "전체",
+    "이름",
+    "아이디",
+    "직급",
+    "소속부서",
+    "임시일자",
+    "퇴사자",
+  ];
 
   const formatDate = (date: Date | string | undefined) => {
     if (!date) return "-";
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    return dateObj.toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).replace(/\. /g, ".").replace(/\.$/, "");
+    const dateObj = typeof date === "string" ? new Date(date) : date;
+    return dateObj
+      .toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
+      .replace(/\. /g, ".")
+      .replace(/\.$/, "");
   };
 
   return (
@@ -286,36 +306,68 @@ export default function UserManagementPage() {
                 <tbody>
                   {users.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-10 text-center text-gray-500">
+                      <td
+                        colSpan={7}
+                        className="py-10 text-center text-gray-500"
+                      >
                         사용자 정보가 없습니다
                       </td>
                     </tr>
                   ) : (
                     users.map((user) => (
-                      <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-50">
+                      <tr
+                        key={user.id}
+                        className="border-b border-gray-200 hover:bg-gray-50"
+                      >
                         <td className="py-4 px-4 text-center">
                           <div className="flex justify-center">
                             <button
-                              onClick={() => toggleLockStatus(user.id, user.isLocked)}
+                              onClick={() =>
+                                toggleLockStatus(user.id, user.isLocked)
+                              }
                               className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center"
                             >
                               {user.isLocked ? (
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-red-500">
-                                  <path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clipRule="evenodd" />
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 24 24"
+                                  fill="currentColor"
+                                  className="w-4 h-4 text-red-500"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z"
+                                    clipRule="evenodd"
+                                  />
                                 </svg>
                               ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-green-500">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 24 24"
+                                  fill="currentColor"
+                                  className="w-4 h-4 text-green-500"
+                                >
                                   <path d="M18 1.5c2.9 0 5.25 2.35 5.25 5.25v3.75a.75.75 0 01-1.5 0V6.75a3.75 3.75 0 10-7.5 0v3a3 3 0 013 3v6.75a3 3 0 01-3 3H3.75a3 3 0 01-3-3v-6.75a3 3 0 013-3h9v-3c0-2.9 2.35-5.25 5.25-5.25z" />
                                 </svg>
                               )}
                             </button>
                           </div>
                         </td>
-                        <td className="py-4 px-4 text-center">{user.username}</td>
-                        <td className="py-4 px-4 text-center">{user.nickname}</td>
-                        <td className="py-4 px-4 text-center">{getDepartmentName(user.departmentId)}</td>
-                        <td className="py-4 px-4 text-center">{getPositionName(user.positionId)}</td>
-                        <td className="py-4 px-4 text-center">{formatDate(user.createdAt)}</td>
+                        <td className="py-4 px-4 text-center">
+                          {user.username}
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          {user.nickname}
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          {getDepartmentName(user.departmentId)}
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          {getPositionName(user.positionId)}
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          {formatDate(user.createdAt)}
+                        </td>
                         <td className="py-4 px-4 text-center">
                           <button
                             onClick={() => deleteUser(user.id)}
@@ -342,7 +394,7 @@ export default function UserManagementPage() {
                   >
                     이전
                   </button>
-                  
+
                   {Array.from({ length: totalPages }).map((_, i) => (
                     <button
                       key={i + 1}
@@ -356,9 +408,11 @@ export default function UserManagementPage() {
                       {i + 1}
                     </button>
                   ))}
-                  
+
                   <button
-                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    onClick={() =>
+                      setCurrentPage(Math.min(totalPages, currentPage + 1))
+                    }
                     disabled={currentPage === totalPages}
                     className="px-3 py-1 text-gray-700"
                   >
