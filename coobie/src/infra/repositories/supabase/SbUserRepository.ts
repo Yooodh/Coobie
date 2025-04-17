@@ -236,23 +236,70 @@ export class SbUserRepository implements UserRepository {
     });
   }
 
+  // async save(user: User): Promise<User> {
+  //   const supabase = await createClient();
+
+  //   const { data, error } = await supabase
+  //     .from("user")
+  //     .insert({
+  //       ID: user.id,
+  //       username: user.username,
+  //       nickname: user.nickname,
+  //       password: user.password,
+  //       department_id: user.departmentId,
+  //       position_id: user.positionId,
+  //       is_locked: user.isLocked,
+  //       is_approved: user.isApproved,
+  //       notification_on: user.notificationOn,
+  //       role_id: user.roleId,
+  //     })
+  //     .select()
+  //     .single();
+
+  //   if (error) {
+  //     throw new Error(`Failed to save user: ${error.message}`);
+  //   }
+
+  //   return {
+  //     id: data.ID,
+  //     username: data.username,
+  //     nickname: data.nickname,
+  //     password: data.password,
+  //     departmentId: data.department_id,
+  //     positionId: data.position_id,
+  //     isLocked: data.is_locked,
+  //     isApproved: data.is_approved,
+  //     notificationOn: data.notification_on,
+  //     roleId: data.role_id,
+  //     createdAt: data.created_at,
+  //     deletedAt: data.deleted_at,
+  //   } as User;
+  // }
+
   async save(user: User): Promise<User> {
     const supabase = await createClient();
 
+    // 저장할 데이터 객체 생성
+    const userData: any = {
+      username: user.username,
+      nickname: user.nickname,
+      password: user.password,
+      department_id: user.departmentId,
+      position_id: user.positionId,
+      is_locked: user.isLocked,
+      is_approved: user.isApproved,
+      notification_on: user.notificationOn,
+      role_id: user.roleId,
+    };
+
+    // ID가 제공된 경우에만 ID 필드 포함
+    if (user.id && user.id.trim() !== "") {
+      userData.ID = user.id;
+    }
+
     const { data, error } = await supabase
       .from("user")
-      .insert({
-        ID: user.id,
-        username: user.username,
-        nickname: user.nickname,
-        password: user.password,
-        department_id: user.departmentId,
-        position_id: user.positionId,
-        is_locked: user.isLocked,
-        is_approved: user.isApproved,
-        notification_on: user.notificationOn,
-        role_id: user.roleId,
-      })
+      .insert(userData)
       .select()
       .single();
 
