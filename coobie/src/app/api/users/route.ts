@@ -33,7 +33,7 @@ function getErrorMessage(error: unknown): string {
   return toErrorWithMessage(error).message;
 }
 
-// GET 핸들러 (사용자 목록 조회)
+// GET 핸들러 (사용자 목록 조회) - 변경 없음
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST 핸들러 (사용자 생성)
+// POST 핸들러 (사용자 생성) - ID 필드를 선택적으로 수정
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -106,27 +106,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ID 검증 - 클라이언트에서 ID를 제공하지 않은 경우 400 에러 반환
-    if (!id) {
-      return NextResponse.json(
-        { error: "사용자 ID는 필수 입력 항목입니다" },
-        { status: 400 }
-      );
-    }
-
     // 저장소 및 유스케이스 초기화
     const userRepository = new SbUserRepository();
     const createUserUseCase = new CreateUserUseCase(userRepository);
 
-    // 사용자 생성 - 클라이언트에서 받은 ID 사용
+    // 사용자 생성 - ID가 제공되지 않은 경우 Supabase가 자동으로 생성
     const newUser = await createUserUseCase.execute(
-      id,
+      id, // ID가 제공되지 않으면 undefined로 전달
       username,
       nickname,
       password,
       departmentId,
       positionId,
-      roleId
+      roleId || "02" // roleId가 제공되지 않으면 기본값 "02" 사용
     );
 
     return NextResponse.json(newUser, { status: 201 });
