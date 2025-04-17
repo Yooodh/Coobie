@@ -9,6 +9,7 @@ export class User {
     public isApproved: boolean = false,
     public notificationOn: boolean = true,
     public roleId: string,
+    public businessNumber: string,
     public deletedAt?: Date,
     public departmentId?: number,
     public positionId?: number
