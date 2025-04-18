@@ -1,9 +1,9 @@
 export class Company {
   constructor(
-    roleId: string,
-    companyName: string,
-    businessNumber: string,
-    isLocked: boolean,
-    deletedAt: Date
+    public Id: string,
+    public companyName: string,
+    public businessNumber: string,
+    public isLocked: boolean,
+    public deletedAt: Date
   ) {}
 }

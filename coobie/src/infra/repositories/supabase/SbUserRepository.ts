@@ -150,6 +150,8 @@ export class SbUserRepository implements UserRepository {
       .select("*")
       .eq("username", username)
       .single();
+    
+      console.log("Supabase 응답:", { data, error });
 
     if (error) {
       // If no data is found, return null without throwing an error
@@ -235,46 +237,6 @@ export class SbUserRepository implements UserRepository {
       } as User;
     });
   }
-
-  // async save(user: User): Promise<User> {
-  //   const supabase = await createClient();
-
-  //   const { data, error } = await supabase
-  //     .from("user")
-  //     .insert({
-  //       ID: user.id,
-  //       username: user.username,
-  //       nickname: user.nickname,
-  //       password: user.password,
-  //       department_id: user.departmentId,
-  //       position_id: user.positionId,
-  //       is_locked: user.isLocked,
-  //       is_approved: user.isApproved,
-  //       notification_on: user.notificationOn,
-  //       role_id: user.roleId,
-  //     })
-  //     .select()
-  //     .single();
-
-  //   if (error) {
-  //     throw new Error(`Failed to save user: ${error.message}`);
-  //   }
-
-  //   return {
-  //     id: data.ID,
-  //     username: data.username,
-  //     nickname: data.nickname,
-  //     password: data.password,
-  //     departmentId: data.department_id,
-  //     positionId: data.position_id,
-  //     isLocked: data.is_locked,
-  //     isApproved: data.is_approved,
-  //     notificationOn: data.notification_on,
-  //     roleId: data.role_id,
-  //     createdAt: data.created_at,
-  //     deletedAt: data.deleted_at,
-  //   } as User;
-  // }
 
   async save(user: User): Promise<User> {
     const supabase = await createClient();
@@ -460,6 +422,54 @@ export class SbUserRepository implements UserRepository {
     if (error) {
       throw new Error(
         `Failed to update status for user with id ${id}: ${error.message}`
+      );
+    }
+  }
+
+  async incrementLoginAttempts(id: string): Promise<number> {
+    const supabase = await createClient();
+
+    // 현재 로그인 시도 횟수 가져오기
+    const { data: userData, error: userError } = await supabase
+      .from("user")
+      .select("login_attempts")
+      .eq("ID", id)
+      .single();
+
+    if (userError) {
+      throw new Error(
+        `Failed to get login attempts for user with id ${id}: ${userError.message}`
+      );
+    }
+
+    // 로그인 시도 횟수 증가
+    const newAttempts = (userData.login_attempts || 0) + 1;
+
+    const { error } = await supabase
+      .from("user")
+      .update({ login_attempts: newAttempts })
+      .eq("ID", id);
+
+    if (error) {
+      throw new Error(
+        `Failed to update login attempts for user with id ${id}: ${error.message}`
+      );
+    }
+
+    return newAttempts;
+  }
+
+  async resetLoginAttempts(id: string): Promise<void> {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+      .from("user")
+      .update({ login_attempts: 0 })
+      .eq("ID", id);
+
+    if (error) {
+      throw new Error(
+        `Failed to reset login attempts for user with id ${id}: ${error.message}`
       );
     }
   }
