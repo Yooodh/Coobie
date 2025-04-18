@@ -12,4 +12,13 @@ export interface UserRepository {
   delete(id: string): Promise<void>;
   resetPassword(id: string, defaultPassword: string): Promise<void>;
   updateLockStatus(id: string, isLocked: boolean): Promise<void>;
+
+  // 로그인 관련
+  incrementLoginAttempts(id: string): Promise<number>;
+  resetLoginAttempts(id: string): Promise<void>;
+  updateApprovalStatus(id: string, isApproved: boolean): Promise<void>;
+  updateStatus(
+    id: string,
+    status: "online" | "offline" | "busy" | "away"
+  ): Promise<void>;
 }
