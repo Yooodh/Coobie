@@ -1,10 +1,10 @@
-// src/app/page.tsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext"
 
 export default function LoginPage() {
   const router = useRouter();

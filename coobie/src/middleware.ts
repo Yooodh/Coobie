@@ -47,7 +47,7 @@ function getRedirectPathByRole(roleId: string) {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
+
   // 토큰 확인
   const token = request.cookies.get("auth_token")?.value;
   const userData = token ? getTokenData(token) : null;
@@ -89,11 +89,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * 미들웨어를 적용할 경로를 지정
-     * - 로그인/가입 관련: /, /auth/:path*
-     * - 보호된 경로: /root/:path*, /admin/:path*, /user/:path*, /dashboard
-     */
     "/",
     "/auth/:path*",
     "/root/:path*",
