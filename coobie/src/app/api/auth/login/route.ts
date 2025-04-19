@@ -30,16 +30,6 @@ export async function POST(request: NextRequest) {
         username,
         password
       );
-
-      // 토큰을 쿠키에 저장
-      const cookieStore = await cookies();
-      cookieStore.set("auth_token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 60 * 24 * 7, // 1주일
-        path: "/",
-      });
-
       // 역할에 따라 리디렉션 URL 제공
       let redirectUrl = "/";
       if (user.roleId === "00") {
@@ -64,7 +54,16 @@ export async function POST(request: NextRequest) {
         redirectUrl,
       };
 
-      return NextResponse.json(authResponse);
+      const response = NextResponse.json(authResponse);
+
+      response.cookies.set("auth_token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 60 * 24 * 7, // 1주일
+        path: "/",
+      });
+
+      return response;
     } catch (error: any) {
       // 특정 오류 처리
       if (error.message === "USER_NOT_FOUND") {

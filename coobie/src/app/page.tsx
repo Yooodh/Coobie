@@ -24,6 +24,7 @@ export default function LoginPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          credentials: "include",
         },
         body: JSON.stringify({ username, password }),
       });
@@ -42,12 +43,15 @@ export default function LoginPage() {
       if (data.user?.roleId === "00") {
         console.log("루트 관리자로 이동: /root/dashboard");
         router.push("/root/dashboard");
+        console.log("이동 시도 완료")
       } else if (data.user?.roleId === "01") {
         console.log("회사 관리자로 이동: /admin/users");
         router.push("/admin/users");
+        console.log("이동 시도 완료")
       } else {
         console.log("일반 사용자로 이동: /user/dashboard");
         router.push("/user/dashboard");
+        console.log("이동 시도 완료")
       }
     } catch (err) {
       console.error("로그인 오류:", err);
