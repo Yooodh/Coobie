@@ -1,19 +1,19 @@
+// src/contexts/AuthContext.tsx
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { AuthUserDto } from "@/application/usecases/auth/dto/AuthUserDto";
-import { AuthResponseDto } from "@/application/usecases/auth/dto/AuthResponseDto";
-import { LoginRequestDto } from "@/application/usecases/auth/dto/LoginRequestDto";
+
+interface User {
+  id: string;
+  username: string;
+  nickname: string;
+  roleId: string;
+  businessNumber?: string;
+}
 
 interface AuthContextType {
-  user: AuthUserDto | null;
+  user: User | null;
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -23,7 +23,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUserDto | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -53,14 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (username: string, password: string) => {
     setLoading(true);
     try {
-      const loginRequest: LoginRequestDto = { username, password };
-
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(loginRequest),
+        body: JSON.stringify({ username, password }),
       });
 
       if (!response.ok) {
@@ -68,14 +66,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(data.error || "로그인에 실패했습니다");
       }
 
-      const authResponse: AuthResponseDto = await response.json();
-      setUser(authResponse.user);
+      const data = await response.json();
+      setUser(data.user);
 
       // 역할에 따라 리디렉션
-      if (authResponse.user.roleId === "00") {
+      if (data.user.roleId === "00") {
         // 루트 관리자
         router.push("/root/dashboard");
-      } else if (authResponse.user.roleId === "01") {
+      } else if (data.user.roleId === "01") {
         // 회사 관리자
         router.push("/admin/users");
       } else {

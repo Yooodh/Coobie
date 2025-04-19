@@ -4,21 +4,22 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { useAuth } from "@/context/AuthContext"
 
 export default function LoginPage() {
-  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
+  
     try {
+      console.log("로그인 시도:", { username });
+      
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
@@ -26,25 +27,30 @@ export default function LoginPage() {
         },
         body: JSON.stringify({ username, password }),
       });
-
+  
       const data = await response.json();
-
+      console.log("로그인 응답:", data);
+  
       if (!response.ok) {
         throw new Error(data.error || "로그인에 실패했습니다");
       }
-
-      // roleId에 따라 다른 페이지로 리다이렉트
-      if (data.user.roleId === "00") {
-        // 루트 관리자(00)
+  
+      // 리다이렉션 전 알림 추가
+      alert("로그인 성공! 페이지 이동 중...");
+      
+      // 역할에 따른 리다이렉션 코드
+      if (data.user?.roleId === "00") {
+        console.log("루트 관리자로 이동: /root/dashboard");
         router.push("/root/dashboard");
-      } else if (data.user.roleId === "01") {
-        // 회사 관리자(01)
+      } else if (data.user?.roleId === "01") {
+        console.log("회사 관리자로 이동: /admin/users");
         router.push("/admin/users");
       } else {
-        // 일반 사용자(02)
+        console.log("일반 사용자로 이동: /user/dashboard");
         router.push("/user/dashboard");
       }
-    } catch (err: any) {
+    } catch (err) {
+      console.error("로그인 오류:", err);
       setError(err.message || "로그인 중 오류가 발생했습니다");
     } finally {
       setLoading(false);
