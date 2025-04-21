@@ -3,6 +3,7 @@ export class Department {
     public id: number,
     public departmentName: string,
     public createdAt: Date,
-    public deletedAt: Date
+    public company_id: string,
+    public deletedAt?: Date
   ) {}
 }
