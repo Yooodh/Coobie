@@ -32,18 +32,44 @@ export default function UserTable({
     }).replace(/\. /g, ".").replace(/\.$/, "");
   };
 
+  // 디버깅을 위한 로그 추가
+  console.log("UserTable에 전달된 부서 목록:", departments);
+  console.log("UserTable에 전달된 직급 목록:", positions);
+
   const getDepartmentName = (departmentId: number | undefined) => {
     if (!departmentId) return "-";
+    
+    // departments가 undefined인 경우 예외 처리
+    if (!departments || !Array.isArray(departments)) {
+      console.warn("부서 목록이 유효하지 않습니다:", departments);
+      return "-";
+    }
+    
     const department = departments.find(dept => dept.id === departmentId);
-    return department ? department.departmentName : "-";
+    if (!department) {
+      console.warn(`ID가 ${departmentId}인 부서를 찾을 수 없습니다.`);
+      return "-";
+    }
+    
+    return department.departmentName;
   };
 
   const getPositionName = (positionId: number | undefined) => {
     if (!positionId) return "-";
+    
+    // positions가 undefined인 경우 예외 처리
+    if (!positions || !Array.isArray(positions)) {
+      console.warn("직급 목록이 유효하지 않습니다:", positions);
+      return "-";
+    }
+    
     const position = positions.find(pos => pos.id === positionId);
-    console.log(position);
-    return position ? position.positionName : "-";
-
+    if (!position) {
+      console.warn(`ID가 ${positionId}인 직급을 찾을 수 없습니다.`);
+      return "-";
+    }
+    
+    return position.positionName;
   };
 
   return (

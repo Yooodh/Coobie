@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SbPositionRepository } from "@/infra/repositories/supabase/SbPositionRepository";
+import { cookies } from "next/headers"; // 쿠키 가져오기
+import { verify } from "jsonwebtoken"; // JWT 검증
+
 
 // 오류 타입 정의
 interface ErrorWithMessage {
@@ -30,39 +33,61 @@ function getErrorMessage(error: unknown): string {
   return toErrorWithMessage(error).message;
 }
 
-// GET 핸들러 (직급 목록 조회)
+function getTokenData(token: string) {
+  try {
+    const jwtSecret = process.env.JWT_SECRET || "default-jwt-secret";
+    return verify(token, jwtSecret) as {
+      userId: string;
+      username: string;
+      roleId: string;
+      businessNumber?: string; // businessNumber도 포함
+    };
+  } catch (error) {
+    console.error("토큰 검증 오류:", error);
+    return null;
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
-    // 현재 사용자 정보 가져오기
-    const currentUserResponse = await fetch(
-      `${request.nextUrl.origin}/api/auth/me`,
-      {
-        headers: request.headers,
-      }
-    );
+    // 쿠키에서 토큰 가져오기
+    const token = cookies().get("auth_token")?.value;
     
-    if (!currentUserResponse.ok) {
+    if (!token) {
       return NextResponse.json(
-        { error: "인증되지 않은 사용자입니다" },
+        { error: "인증되지 않은 요청입니다" },
         { status: 401 }
       );
     }
-    
-    const userData = await currentUserResponse.json();
-    const companyId = userData.user.businessNumber;
 
-    if (!companyId) {
+    // 토큰 검증 및 사용자 정보 추출
+    const tokenData = getTokenData(token);
+    if (!tokenData) {
       return NextResponse.json(
-        { error: "회사 정보를 찾을 수 없습니다" },
+        { error: "유효하지 않은 토큰입니다" },
+        { status: 401 }
+      );
+    }
+
+    console.log("토큰에서 추출한 사용자 정보:", tokenData);
+    
+    // 사용자의 businessNumber 가져오기
+    const businessNumber = tokenData.businessNumber;
+
+    if (!businessNumber) {
+      return NextResponse.json(
+        { error: "사용자의 회사 정보를 찾을 수 없습니다" },
         { status: 400 }
       );
     }
 
+    console.log("사용할 Business Number:", businessNumber);
+
     // 직급 저장소 초기화
     const positionRepository = new SbPositionRepository();
     
-    // 해당 회사의 직급 가져오기
-    const positions = await positionRepository.getAllByCompany(companyId);
+    // 해당 회사의 직급 가져오기 (businessNumber 사용)
+    const positions = await positionRepository.getAllByCompany(businessNumber);
     
     // 응답 데이터 형식 변환
     const formattedPositions = positions.map(pos => ({
@@ -75,12 +100,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(formattedPositions);
   } catch (error: unknown) {
     console.error("직급 목록 조회 중 오류 발생:", error);
+    
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : "직급 목록을 불러오는데 실패했습니다";
+    
     return NextResponse.json(
-      { error: getErrorMessage(error) || "직급 목록을 불러오는데 실패했습니다" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
 }
+
 
 // POST 핸들러 (직급 생성)
 export async function POST(request: NextRequest) {

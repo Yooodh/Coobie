@@ -9,7 +9,28 @@ export class SbDepartmentRepository implements DepartmentRepository {
     this.supabase = createBrowserSupabaseClient();
   }
 
-  async getAllByCompany(companyId: string): Promise<Department[]> {
+  async getAllByCompany(businessNumber: string): Promise<Department[]> {
+    // 먼저 business_number로 회사 ID 조회
+    const { data: companyData, error: companyError } = await this.supabase
+      .from("company")
+      .select("ID")
+      .eq("business_number", businessNumber)
+      .single();
+
+    if (companyError) {
+      console.error("회사 조회 오류:", companyError);
+      return []; // 조회 실패 시 빈 배열 반환
+    }
+
+    if (!companyData) {
+      console.error(`Business Number가 ${businessNumber}인 회사를 찾을 수 없음`);
+      return [];
+    }
+
+    const companyId = companyData.ID;
+    console.log(`비즈니스 번호 ${businessNumber}로 찾은 회사 ID: ${companyId}`);
+
+    // 찾은 회사 ID로 부서 조회
     const { data, error } = await this.supabase
       .from("department")
       .select("*")
@@ -17,7 +38,8 @@ export class SbDepartmentRepository implements DepartmentRepository {
       .is("deleted_at", null);
 
     if (error) {
-      throw new Error(`Failed to fetch departments: ${error.message}`);
+      console.error("부서 조회 오류:", error);
+      return [];
     }
 
     return data.map(
@@ -31,6 +53,7 @@ export class SbDepartmentRepository implements DepartmentRepository {
         )
     );
   }
+
 
   async create(businessNumber: string, departmentName: string): Promise<Department> {
     // 먼저 business_number로 회사를 조회합니다 (user 테이블에서)

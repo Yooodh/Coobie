@@ -1,4 +1,4 @@
-// src/application/usecases/auth/AuthenticateUserUseCase.ts
+// src/application/usecases/auth/AuthenticateUserUseCase.ts 수정
 import { User } from "@/domain/entities/User";
 import { UserRepository } from "@/domain/repositories/UserRepository";
 import { sign } from "jsonwebtoken";
@@ -42,17 +42,25 @@ export class AuthenticateUserUseCase {
     // 로그인 성공 시 로그인 실패 횟수 초기화
     await this.userRepository.resetLoginAttempts(user.id);
 
-    // 토큰 생성
+    // 토큰 생성 (businessNumber 추가)
     const jwtSecret = process.env.JWT_SECRET || "default-jwt-secret";
     const token = sign(
       {
         userId: user.id,
         username: user.username,
         roleId: user.roleId,
+        businessNumber: user.businessNumber // 비즈니스 번호 추가
       },
       jwtSecret,
       { expiresIn: "7d" }
-    );
+    );    
+
+    console.log("생성된 토큰 정보:", {
+      userId: user.id,
+      username: user.username,
+      roleId: user.roleId,
+      businessNumber: user.businessNumber
+    });
 
     return { user, token };
   }

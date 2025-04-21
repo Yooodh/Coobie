@@ -8,7 +8,50 @@ export class SbPositionRepository implements PositionRepository {
   constructor() {
     this.supabase = createBrowserSupabaseClient();
   }
-  async getAllByCompany(companyId: string): Promise<Position[]> {
+  // async getAllByCompany(companyId: string): Promise<Position[]> {
+  //   const { data, error } = await this.supabase
+  //     .from("position")
+  //     .select("*")
+  //     .eq("company_id", companyId)
+  //     .is("deleted_at", null);
+
+  //   if (error) {
+  //     throw new Error(`Failed to fetch positions: ${error.message}`);
+  //   }
+
+  //   return data.map(
+  //     (pos) =>
+  //       new Position(
+  //         pos.ID,
+  //         pos.position_name,
+  //         new Date(pos.created_at),
+  //         pos.company_id,
+  //         pos.deleted_at ? new Date(pos.deleted_at) : undefined
+  //       )
+  //   );
+  // }
+  async getAllByCompany(businessNumber: string): Promise<Position[]> {
+    // 먼저 business_number로 회사 ID 조회
+    const { data: companyData, error: companyError } = await this.supabase
+      .from("company")
+      .select("ID")
+      .eq("business_number", businessNumber)
+      .single();
+
+    if (companyError) {
+      console.error("회사 조회 오류:", companyError);
+      return []; // 조회 실패 시 빈 배열 반환
+    }
+
+    if (!companyData) {
+      console.error(`Business Number가 ${businessNumber}인 회사를 찾을 수 없음`);
+      return [];
+    }
+
+    const companyId = companyData.ID;
+    console.log(`비즈니스 번호 ${businessNumber}로 찾은 회사 ID: ${companyId}`);
+
+    // 찾은 회사 ID로 직급 조회
     const { data, error } = await this.supabase
       .from("position")
       .select("*")
@@ -16,7 +59,8 @@ export class SbPositionRepository implements PositionRepository {
       .is("deleted_at", null);
 
     if (error) {
-      throw new Error(`Failed to fetch positions: ${error.message}`);
+      console.error("직급 조회 오류:", error);
+      return [];
     }
 
     return data.map(
@@ -30,6 +74,7 @@ export class SbPositionRepository implements PositionRepository {
         )
     );
   }
+
 
   async create(businessNumber: string, positionName: string): Promise<Position> {
     // 먼저 business_number로 회사를 조회합니다 (user 테이블에서)
