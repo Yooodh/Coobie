@@ -1,12 +1,14 @@
 import { Department } from "@/domain/entities/Department";
 import { DepartmentRepository } from "@/domain/repositories/DepartmentRepository";
-import { createClient } from "@/utils/supabase/server";
+import { createBrowserSupabaseClient } from "@/utils/supabase/client";
+// import { createClient } from "@/utils/supabase/server";
+
 
 export class SbDepartmentRepository implements DepartmentRepository {
   async getAllByCompany(companyId: string): Promise<Department[]> {
-    const supabse = await createClient();
+    const supabse = await  createBrowserSupabaseClient();
     const { data, error } = await supabse
-      .from("departments")
+      .from("department")
       .select("*")
       .eq("company_id", companyId)
       .is("deleted_at", null);

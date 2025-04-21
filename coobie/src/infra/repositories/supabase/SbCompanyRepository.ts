@@ -2,11 +2,12 @@
 import { Company } from "@/domain/entities/Company";
 import { CompanyFilter } from "@/domain/repositories/filters/CompanyFilter";
 import { CompanyRepository } from "@/domain/repositories/CompanyRepository";
-import { createClient } from "@/utils/supabase/server";
+import { createBrowserSupabaseClient } from "@/utils/supabase/client";
+
 
 export class SbCompanyRepository implements CompanyRepository {
   async count(filter?: CompanyFilter): Promise<number> {
-    const supabase = await createClient();
+    const supabase = await createBrowserSupabaseClient();
 
     let query = supabase
       .from("company")
@@ -37,7 +38,7 @@ export class SbCompanyRepository implements CompanyRepository {
   }
 
   async findAll(filter?: CompanyFilter): Promise<Company[]> {
-    const supabase = await createClient();
+    const supabase = await createBrowserSupabaseClient();
 
     let query = supabase.from("company").select("*").is("deleted_at", null);
 
@@ -78,7 +79,7 @@ export class SbCompanyRepository implements CompanyRepository {
   }
 
   async findById(id: string): Promise<Company | null> {
-    const supabase = await createClient();
+    const supabase = await createBrowserSupabaseClient();
 
     const { data, error } = await supabase
       .from("company")
@@ -110,7 +111,7 @@ export class SbCompanyRepository implements CompanyRepository {
   }
 
   async findByBusinessNumber(businessNumber: string): Promise<Company | null> {
-    const supabase = await createClient();
+    const supabase = await createBrowserSupabaseClient();
 
     const { data, error } = await supabase
       .from("company")
@@ -142,7 +143,7 @@ export class SbCompanyRepository implements CompanyRepository {
   }
 
   async save(company: Company): Promise<Company> {
-    const supabase = await createClient();
+    const supabase = await createBrowserSupabaseClient();
 
     // 저장할 데이터 객체 생성
     const companyData: any = {
@@ -176,7 +177,7 @@ export class SbCompanyRepository implements CompanyRepository {
   }
 
   async update(company: Company): Promise<Company> {
-    const supabase = await createClient();
+    const supabase = await createBrowserSupabaseClient();
 
     const updates: any = {};
 
@@ -209,7 +210,7 @@ export class SbCompanyRepository implements CompanyRepository {
   }
 
   async delete(id: string): Promise<void> {
-    const supabase = await createClient();
+    const supabase = await createBrowserSupabaseClient();
 
     // Soft delete by updating the deleted_at field
     const { error } = await supabase
@@ -225,7 +226,7 @@ export class SbCompanyRepository implements CompanyRepository {
   }
 
   async updateLockStatus(id: string, isLocked: boolean): Promise<void> {
-    const supabase = await createClient();
+    const supabase = await createBrowserSupabaseClient();
 
     const { error } = await supabase
       .from("company")
@@ -240,7 +241,7 @@ export class SbCompanyRepository implements CompanyRepository {
   }
 
   async updateApprovalStatus(id: string, isApproved: boolean): Promise<void> {
-    const supabase = await createClient();
+    const supabase = await createBrowserSupabaseClient();
 
     const { error } = await supabase
       .from("company")
@@ -256,7 +257,7 @@ export class SbCompanyRepository implements CompanyRepository {
 
   async resetPassword(id: string, defaultPassword: string): Promise<void> {
     // 회사의 관리자 사용자를 찾아서 비밀번호 초기화
-    const supabase = await createClient();
+    const supabase = await createBrowserSupabaseClient();
 
     // 회사 정보 조회
     const { data: companyData, error: companyError } = await supabase
