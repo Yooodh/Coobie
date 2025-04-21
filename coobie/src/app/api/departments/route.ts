@@ -81,3 +81,77 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// POST 핸들러 (부서 생성)
+export async function POST(request: NextRequest) {
+  try {
+    // 현재 사용자 정보 가져오기
+    const currentUserResponse = await fetch(
+      `${request.nextUrl.origin}/api/auth/me`,
+      {
+        headers: request.headers,
+      }
+    );
+    
+    if (!currentUserResponse.ok) {
+      return NextResponse.json(
+        { error: "인증되지 않은 사용자입니다" },
+        { status: 401 }
+      );
+    }
+    
+    const userData = await currentUserResponse.json();
+    const companyId = userData.user.businessNumber;
+
+    if (!companyId) {
+      return NextResponse.json(
+        { error: "회사 정보를 찾을 수 없습니다" },
+        { status: 400 }
+      );
+    }
+    
+    // 요청 본문 파싱
+    const body = await request.json();
+    const { departmentName } = body;
+    
+    if (!departmentName || typeof departmentName !== "string") {
+      return NextResponse.json(
+        { error: "부서명은 필수 입력 항목입니다" },
+        { status: 400 }
+      );
+    }
+    
+    // 부서 저장소 초기화
+    const departmentRepository = new SbDepartmentRepository();
+    
+    // 부서 생성
+    const newDepartment = await departmentRepository.create(companyId, departmentName);
+    
+    // 응답 데이터 형식 변환
+    const formattedDepartment = {
+      id: newDepartment.id,
+      departmentName: newDepartment.departmentName,
+      createdAt: newDepartment.createdAt,
+      companyId: newDepartment.company_id
+    };
+    
+    return NextResponse.json(formattedDepartment, { status: 201 });
+  } catch (error: unknown) {
+    console.error("부서 생성 중 오류 발생:", error);
+    
+    const errorMessage = getErrorMessage(error);
+    
+    // 중복 오류 처리
+    if (errorMessage.includes("이미 존재하는 부서명")) {
+      return NextResponse.json(
+        { error: errorMessage },
+        { status: 409 }
+      );
+    }
+    
+    return NextResponse.json(
+      { error: errorMessage || "부서 생성에 실패했습니다" },
+      { status: 500 }
+    );
+  }
+}
