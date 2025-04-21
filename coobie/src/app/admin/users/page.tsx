@@ -1,16 +1,20 @@
+// src/app/admin/users/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
+import { SbUserRepository } from "@/infra/repositories/supabase/SbUserRepository";
+import { SbDepartmentRepository } from "@/infra/repositories/supabase/SbDepartmentRepository";
+import { SbPositionRepository } from "@/infra/repositories/supabase/SbPositionRepository";
+import { FetchUsersUseCase } from "@/application/usecases/admin/FetchUsersUseCase";
+import { FetchDepartmentsAndPositionsUseCase } from "@/application/usecases/admin/FetchDepartmentsAndPositionsUseCase";
+import { ToggleLockStatusUseCase } from "@/application/usecases/admin/ToggleLockStatusUseCase";
+import { DeleteUserUseCase } from "@/application/usecases/admin/DeleteUserUseCase";
+import { UserFilter } from "@/domain/repositories/filters/UserFilter";
 
-export default function UserManagementPage({
-  fetchUsersUseCase,
-  fetchDepartmentsAndPositionsUseCase,
-  toggleLockStatusUseCase,
-  deleteUserUseCase,
-}) {
-  const [users, setUsers] = useState<{ id: string; username: string; nickname: string; departmentId: string; positionId: string; createdAt: string; isLocked: boolean }[]>([]);
-  const [departments, setDepartments] = useState<{ id: string; departmentName: string }[]>([]);
-  const [positions, setPositions] = useState<{ id: string; positionName: string }[]>([]);
+export default function UserManagementPage() {
+  const [users, setUsers] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [positions, setPositions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -23,22 +27,47 @@ export default function UserManagementPage({
   });
   const [searchTerm, setSearchTerm] = useState("");
 
+  // 유스케이스 초기화
+  const userRepository = new SbUserRepository();
+  const departmentRepository = new SbDepartmentRepository();
+  const positionRepository = new SbPositionRepository();
+  
+  const fetchUsersUseCase = new FetchUsersUseCase(userRepository);
+  const fetchDepartmentsAndPositionsUseCase = new FetchDepartmentsAndPositionsUseCase(
+    departmentRepository,
+    positionRepository
+  );
+  const toggleLockStatusUseCase = new ToggleLockStatusUseCase(userRepository);
+  const deleteUserUseCase = new DeleteUserUseCase(userRepository);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        // Fetch departments and positions
-        const { departments, positions } =
-          await fetchDepartmentsAndPositionsUseCase.execute();
+        // 현재 로그인한 사용자의 회사 ID 가져오기
+        const authResponse = await fetch("/api/auth/me");
+        const authData = await authResponse.json();
+        const companyId = authData.user.businessNumber; // 사용자의 businessNumber를 회사 ID로 사용
+
+        // 부서와 직급 정보 가져오기
+        const { departments, positions } = await fetchDepartmentsAndPositionsUseCase.execute(companyId);
         setDepartments(departments);
         setPositions(positions);
 
-        // Fetch users
-        const { users, totalPages } = await fetchUsersUseCase.execute(
-          filters,
-          currentPage
+        // 사용자 목록 가져오기
+        const userFilter = new UserFilter(
+          filters.username,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          filters.roleId,
+          filters.isLocked,
+          filters.isApproved
         );
+
+        const { users, totalPages } = await fetchUsersUseCase.execute(userFilter, currentPage);
         setUsers(users);
         setTotalPages(totalPages);
       } catch (err) {
@@ -88,19 +117,19 @@ export default function UserManagementPage({
       <div className="flex items-center mb-6">
         <div className="w-16 h-16 bg-gray-200 rounded-full mr-4"></div>
         <div>
-          <h2 className="text-xl font-bold">반갑습니다! 홍길동님</h2>
-          <p className="text-gray-600">사업자 번호: 123-45-67890</p>
+          <h2 className="text-xl font-bold">반갑습니다! 관리자님</h2>
+          <p className="text-gray-600">회사 사용자 관리</p>
         </div>
       </div>
 
-      {/* 검색 탭 */}
+      {/* 검색 폼 */}
       <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
         <form onSubmit={handleSearch} className="flex items-center">
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="검색어를 입력해주세요"
+            placeholder="사용자 이름으로 검색"
             className="flex-1 p-2 border border-gray-300 rounded"
           />
           <button
@@ -152,31 +181,35 @@ export default function UserManagementPage({
                     >
                       <td className="py-4 px-4 text-center">
                         <button
-                          onClick={() =>
-                            handleToggleLockStatus(user.id, user.isLocked)
-                          }
-                          className="text-blue-500 hover:text-blue-700"
+                          onClick={() => handleToggleLockStatus(user.id, user.isLocked)}
+                          className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center"
                         >
-                          {user.isLocked ? "잠금 해제" : "잠금"}
+                          {user.isLocked ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-red-500">
+                              <path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clipRule="evenodd" />
+                            </svg>
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-green-500">
+                              <path d="M18 1.5c2.9 0 5.25 2.35 5.25 5.25v3.75a.75.75 0 01-1.5 0V6.75a3.75 3.75 0 10-7.5 0v3a3 3 0 013 3v6.75a3 3 0 01-3 3H3.75a3 3 0 01-3-3v-6.75a3 3 0 013-3h9v-3c0-2.9 2.35-5.25 5.25-5.25z" />
+                            </svg>
+                          )}
                         </button>
                       </td>
                       <td className="py-4 px-4 text-center">{user.username}</td>
                       <td className="py-4 px-4 text-center">{user.nickname}</td>
                       <td className="py-4 px-4 text-center">
-                        {departments.find((d) => d.id === user.departmentId)
-                          ?.departmentName || "-"}
+                        {departments.find((d) => d.id === user.departmentId)?.departmentName || "-"}
                       </td>
                       <td className="py-4 px-4 text-center">
-                        {positions.find((p) => p.id === user.positionId)
-                          ?.positionName || "-"}
+                        {positions.find((p) => p.id === user.positionId)?.positionName || "-"}
                       </td>
                       <td className="py-4 px-4 text-center">
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-"}
                       </td>
                       <td className="py-4 px-4 text-center">
                         <button
                           onClick={() => handleDeleteUser(user.id)}
-                          className="text-red-500 hover:text-red-700"
+                          className="text-red-500 hover:text-red-700 font-medium"
                         >
                           삭제
                         </button>

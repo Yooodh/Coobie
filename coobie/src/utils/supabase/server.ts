@@ -1,17 +1,19 @@
+// src/utils/supabase/server.ts
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-export function createServerSupabaseClient() {
-  const cookieStore = cookies();
+// 서버 전용 함수로 만들기 위해 async 함수로 변경
+export async function createServerSupabaseClient() {
+  const cookieStore = await cookies();
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!supabaseUrl || !supabaseRoleKey) {
+  if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error("Supabase 환경 변수가 설정되지 않았습니다.");
   }
 
-  return createServerClient(supabaseUrl, supabaseRoleKey, {
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       get(name) {
         return cookieStore.get(name)?.value || null;
