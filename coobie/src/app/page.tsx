@@ -16,44 +16,41 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-  
+
     try {
       console.log("로그인 시도:", { username });
-      
+
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          credentials: "include",
         },
+        credentials: "include",
         body: JSON.stringify({ username, password }),
       });
-  
+
       const data = await response.json();
       console.log("로그인 응답:", data);
-  
+
       if (!response.ok) {
         throw new Error(data.error || "로그인에 실패했습니다");
       }
-  
+
       // 리다이렉션 전 알림 추가
       alert("로그인 성공! 페이지 이동 중...");
-      
+
       // 역할에 따른 리다이렉션 코드
       if (data.user?.roleId === "00") {
         console.log("루트 관리자로 이동: /root/dashboard");
         router.push("/root/dashboard");
-        console.log("이동 시도 완료")
       } else if (data.user?.roleId === "01") {
         console.log("회사 관리자로 이동: /admin/users");
         router.push("/admin/users");
-        console.log("이동 시도 완료")
       } else {
         console.log("일반 사용자로 이동: /user/dashboard");
         router.push("/user/dashboard");
-        console.log("이동 시도 완료")
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("로그인 오류:", err);
       setError(err.message || "로그인 중 오류가 발생했습니다");
     } finally {

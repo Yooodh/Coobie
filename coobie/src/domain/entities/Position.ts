@@ -3,6 +3,7 @@ export class Position {
     public id: number,
     public positionName: string,
     public createdAt: Date,
-    public deletedAt: Date
+    public company_id: string, 
+    public deletedAt?: Date,
   ) {}
 }

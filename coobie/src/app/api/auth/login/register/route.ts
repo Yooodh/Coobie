@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SbCompanyRepository } from "@/infra/repositories/supabase/SbCompanyRepository";
 import { SbUserRepository } from "@/infra/repositories/supabase/SbUserRepository";
-import { RegisterCompanyUseCase } from "@/application/usecases/auth/RegisterCompanyUseCase";
+// import { RegisterCompanyUseCase } from "@/application/usecases/auth/RegisterCompanyUseCase";
 
 export async function POST(request: NextRequest) {
   try {

@@ -3,22 +3,14 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-
-interface Department {
-  id: number;
-  departmentName: string;
-}
-
-interface Position {
-  id: number;
-  positionName: string;
-}
+import { Department } from "@/domain/entities/Department";
+import { Position } from "@/domain/entities/Position";
 
 export default function CreateUserPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // 폼 데이터
   const [formData, setFormData] = useState({
     username: "",
@@ -28,7 +20,7 @@ export default function CreateUserPage() {
     departmentId: "",
     positionId: "",
   });
-  
+
   // 선택 목록 데이터
   const [departments, setDepartments] = useState<Department[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
@@ -38,28 +30,30 @@ export default function CreateUserPage() {
     const fetchOptions = async () => {
       try {
         // 부서 목록 가져오기
-        const deptResponse = await fetch('/api/departments');
+        const deptResponse = await fetch("/api/departments");
         if (deptResponse.ok) {
           const deptData = await deptResponse.json();
           setDepartments(deptData);
         }
-        
+
         // 직급 목록 가져오기
-        const posResponse = await fetch('/api/positions');
+        const posResponse = await fetch("/api/positions");
         if (posResponse.ok) {
           const posData = await posResponse.json();
           setPositions(posData);
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error("옵션 데이터를 불러오는 중 오류 발생:", err);
       }
     };
-    
+
     fetchOptions();
   }, []);
 
   // 입력 필드 변경 처리
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
@@ -72,42 +66,50 @@ export default function CreateUserPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    
+
     // 비밀번호 확인
     if (formData.password !== formData.confirmPassword) {
       setError("비밀번호가 일치하지 않습니다");
       setLoading(false);
       return;
     }
-    
+
     try {
-      // 사용자 생성 API 호출 (ID 필드 없이)
-      const response = await fetch('/api/users', {
-        method: 'POST',
+      // 사용자 생성 API 호출
+      const response = await fetch("/api/users", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           // id 필드 제외 - Supabase가 자동 생성
           username: formData.username,
           nickname: formData.nickname,
           password: formData.password,
-          departmentId: formData.departmentId ? parseInt(formData.departmentId) : undefined,
-          positionId: formData.positionId ? parseInt(formData.positionId) : undefined,
+          departmentId: formData.departmentId
+            ? parseInt(formData.departmentId)
+            : undefined,
+          positionId: formData.positionId
+            ? parseInt(formData.positionId)
+            : undefined,
           roleId: "02", // 사원 역할 ID 고정
         }),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `오류: ${response.status}`);
       }
-      
+
       // 성공 시 사용자 목록 페이지로 이동
       alert("사용자가 성공적으로 생성되었습니다");
-      router.push('/admin/users');
-    } catch (err: any) {
-      setError(err.message || "사용자 생성 중 오류가 발생했습니다");
+      router.push("/admin/users");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "사용자 생성 중 오류가 발생했습니다"
+      );
     } finally {
       setLoading(false);
     }
@@ -124,13 +126,13 @@ export default function CreateUserPage() {
           목록으로 돌아가기
         </Link>
       </div>
-      
+
       {error && (
         <div className="bg-red-100 text-red-700 p-4 rounded-md mb-6">
           {error}
         </div>
       )}
-      
+
       <div className="bg-white p-6 rounded-lg shadow-md">
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -149,7 +151,7 @@ export default function CreateUserPage() {
                 placeholder="사용자명을 입력하세요"
               />
             </div>
-            
+
             {/* 닉네임 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -165,7 +167,7 @@ export default function CreateUserPage() {
                 placeholder="닉네임을 입력하세요"
               />
             </div>
-            
+
             {/* 비밀번호 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -181,7 +183,7 @@ export default function CreateUserPage() {
                 placeholder="비밀번호를 입력하세요"
               />
             </div>
-            
+
             {/* 비밀번호 확인 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -197,7 +199,7 @@ export default function CreateUserPage() {
                 placeholder="비밀번호를 다시 입력하세요"
               />
             </div>
-            
+
             {/* 부서 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -217,7 +219,7 @@ export default function CreateUserPage() {
                 ))}
               </select>
             </div>
-            
+
             {/* 직급 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -238,11 +240,11 @@ export default function CreateUserPage() {
               </select>
             </div>
           </div>
-          
+
           <div className="mt-8 flex justify-end">
             <button
               type="button"
-              onClick={() => router.push('/admin/users')}
+              onClick={() => router.push("/admin/users")}
               className="mr-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded"
             >
               취소
