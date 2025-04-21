@@ -41,7 +41,9 @@ export default function UserTable({
   const getPositionName = (positionId: number | undefined) => {
     if (!positionId) return "-";
     const position = positions.find(pos => pos.id === positionId);
+    console.log(position);
     return position ? position.positionName : "-";
+
   };
 
   return (

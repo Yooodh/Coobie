@@ -48,7 +48,7 @@ export default function UserManagementPage() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      let queryParams = new URLSearchParams();
+      const queryParams = new URLSearchParams();
       
       // 페이지네이션 추가
       queryParams.append("page", currentPage.toString());

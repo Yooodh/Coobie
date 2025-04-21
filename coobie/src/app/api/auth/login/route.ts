@@ -13,9 +13,21 @@ export async function POST(request: NextRequest) {
     const { username, password } = loginRequest;
 
     // 필수 필드 검증
-    if (!username || !password) {
+    // if (!username || !password) {
+    //   return NextResponse.json(
+    //     { error: "사용자명과 비밀번호를 입력해주세요" },
+    //     { status: 400 }
+    //   );
+    // }
+    if (!username) {
       return NextResponse.json(
-        { error: "사용자명과 비밀번호를 입력해주세요" },
+        { error: "사원번호를 입력해주세요" },
+        { status: 400 }
+      );
+    }
+    if (!password) {
+      return NextResponse.json(
+        { error: "비밀번호를 입력해주세요" },
         { status: 400 }
       );
     }
