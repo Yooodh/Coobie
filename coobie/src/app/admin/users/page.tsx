@@ -2,224 +2,253 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { SbUserRepository } from "@/infra/repositories/supabase/SbUserRepository";
-import { SbDepartmentRepository } from "@/infra/repositories/supabase/SbDepartmentRepository";
-import { SbPositionRepository } from "@/infra/repositories/supabase/SbPositionRepository";
-import { FetchUsersUseCase } from "@/application/usecases/admin/FetchUsersUseCase";
-import { FetchDepartmentsAndPositionsUseCase } from "@/application/usecases/admin/FetchDepartmentsAndPositionsUseCase";
-import { ToggleLockStatusUseCase } from "@/application/usecases/admin/ToggleLockStatusUseCase";
-import { DeleteUserUseCase } from "@/application/usecases/admin/DeleteUserUseCase";
+import { User } from "@/domain/entities/User";
+import { Department } from "@/domain/entities/Department";
+import { Position } from "@/domain/entities/Position";
 import { UserFilter } from "@/domain/repositories/filters/UserFilter";
+import SearchTabs from "@/app/components/admin/SearchTabs";
+import UserTable from "@/app/components/admin/UserTable";
 
 export default function UserManagementPage() {
-  const [users, setUsers] = useState<any[]>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
-  const [positions, setPositions] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [filters, setFilters] = useState({
-    username: "",
-    isLocked: undefined,
-    isApproved: undefined,
-    roleId: "02",
-  });
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchType, setSearchType] = useState("전체");
 
-  // 유스케이스 초기화
-  const userRepository = new SbUserRepository();
-  const departmentRepository = new SbDepartmentRepository();
-  const positionRepository = new SbPositionRepository();
-  
-  const fetchUsersUseCase = new FetchUsersUseCase(userRepository);
-  const fetchDepartmentsAndPositionsUseCase = new FetchDepartmentsAndPositionsUseCase(
-    departmentRepository,
-    positionRepository
-  );
-  const toggleLockStatusUseCase = new ToggleLockStatusUseCase(userRepository);
-  const deleteUserUseCase = new DeleteUserUseCase(userRepository);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-
-        // 현재 로그인한 사용자의 회사 ID 가져오기
-        const authResponse = await fetch("/api/auth/me");
-        const authData = await authResponse.json();
-        const companyId = authData.user.businessNumber; // 사용자의 businessNumber를 회사 ID로 사용
-
-        // 부서와 직급 정보 가져오기
-        const { departments, positions } = await fetchDepartmentsAndPositionsUseCase.execute(companyId);
-        setDepartments(departments);
-        setPositions(positions);
-
-        // 사용자 목록 가져오기
-        const userFilter = new UserFilter(
-          filters.username,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          filters.roleId,
-          filters.isLocked,
-          filters.isApproved
-        );
-
-        const { users, totalPages } = await fetchUsersUseCase.execute(userFilter, currentPage);
-        setUsers(users);
-        setTotalPages(totalPages);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "데이터 로딩 실패");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [filters, currentPage]);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setFilters((prevFilters) => ({
-      ...prevFilters,
-      username: searchTerm,
-    }));
-    setCurrentPage(1);
-  };
-
-  const handleToggleLockStatus = async (userId: string, isLocked: boolean) => {
+  // 부서, 직급 정보 가져오기
+  const fetchDepartmentsAndPositions = async () => {
     try {
-      await toggleLockStatusUseCase.execute(userId, isLocked);
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.id === userId ? { ...user, isLocked: !isLocked } : user
-        )
-      );
+      const [deptResponse, posResponse] = await Promise.all([
+        fetch("/api/departments"),
+        fetch("/api/positions")
+      ]);
+
+      if (deptResponse.ok) {
+        const deptData = await deptResponse.json();
+        console.log("부서 데이터:", deptData);
+        setDepartments(deptData);
+      }
+
+      if (posResponse.ok) {
+        const posData = await posResponse.json();
+        console.log("직급 데이터:", posData);
+        setPositions(posData);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "잠금 상태 변경 실패");
+      console.error("부서/직급 정보를 불러오는 중 오류 발생:", err);
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
+  // 사용자 목록 가져오기
+  const fetchUsers = async () => {
+    setLoading(true);
     try {
-      await deleteUserUseCase.execute(userId);
-      setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userId));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "사용자 삭제 실패");
+      let queryParams = new URLSearchParams();
+      
+      // 페이지네이션 추가
+      queryParams.append("page", currentPage.toString());
+      queryParams.append("limit", "10");
+      
+      // 역할 ID 고정 (일반 사용자만)
+      queryParams.append("roleId", "02");
+      
+      // 필터 추가
+      if (searchTerm) {
+        if (searchType === "이름") {
+          queryParams.append("nickname", searchTerm);
+        } else if (searchType === "아이디") {
+          queryParams.append("username", searchTerm);
+        } else {
+          // 전체 검색
+          queryParams.append("username", searchTerm);
+        }
+      }
+      
+      const response = await fetch(`/api/users?${queryParams.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error(`오류: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("사용자 데이터:", data);
+      setUsers(data.users);
+      setTotalPages(data.totalPages);
+    } catch (err: any) {
+      setError(err.message || "사용자 목록을 불러오는데 실패했습니다");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDepartmentsAndPositions();
+  }, []);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [currentPage, searchTerm, searchType]);
+
+  const handleSearch = (term: string, type: string) => {
+    setSearchTerm(term);
+    setSearchType(type);
+    setCurrentPage(1);
+  };
+
+  const resetPassword = async (userId: string) => {
+    if (confirm("정말 이 사용자의 비밀번호를 초기화하시겠습니까?")) {
+      try {
+        const response = await fetch(`/api/users/${userId}/reset-password`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ defaultPassword: "0000" }),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`오류: ${response.status}`);
+        }
+        
+        alert("비밀번호가 성공적으로 초기화되었습니다");
+        fetchUsers(); // 목록 새로고침
+      } catch (err: any) {
+        alert(`비밀번호 초기화 실패: ${err.message}`);
+      }
+    }
+  };
+
+  const toggleLockStatus = async (userId: string, currentStatus: boolean) => {
+    if (currentStatus) {
+      // 잠금된 상태면 바로 비밀번호 초기화
+      await resetPassword(userId);
+    } else {
+      // 정상 상태면 잠금 상태로 변경
+      try {
+        const response = await fetch(`/api/users/${userId}/lock-status`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ isLocked: true }),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`오류: ${response.status}`);
+        }
+        
+        alert("사용자 계정이 잠금 설정되었습니다");
+        fetchUsers(); // 목록 새로고침
+      } catch (err: any) {
+        alert(`잠금 상태 변경 실패: ${err.message}`);
+      }
+    }
+  };
+
+  const deleteUser = async (userId: string) => {
+    if (confirm("정말 이 사용자를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) {
+      try {
+        const response = await fetch(`/api/users/${userId}`, {
+          method: "DELETE",
+        });
+        
+        if (!response.ok) {
+          throw new Error(`오류: ${response.status}`);
+        }
+        
+        alert("사용자가 성공적으로 삭제되었습니다");
+        fetchUsers(); // 목록 새로고침
+      } catch (err: any) {
+        alert(`사용자 삭제 실패: ${err.message}`);
+      }
     }
   };
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      {/* 회사 정보 헤더 */}
+      {/* 회사 관리자 정보 헤더 */}
       <div className="flex items-center mb-6">
         <div className="w-16 h-16 bg-gray-200 rounded-full mr-4"></div>
         <div>
           <h2 className="text-xl font-bold">반갑습니다! 관리자님</h2>
-          <p className="text-gray-600">회사 사용자 관리</p>
+          <p className="text-gray-600">사원 관리</p>
         </div>
       </div>
 
-      {/* 검색 폼 */}
-      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-        <form onSubmit={handleSearch} className="flex items-center">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="사용자 이름으로 검색"
-            className="flex-1 p-2 border border-gray-300 rounded"
-          />
-          <button
-            type="submit"
-            className="ml-2 px-4 py-2 bg-blue-500 text-white rounded"
-          >
-            검색
-          </button>
-        </form>
-      </div>
+      {/* 검색 탭 */}
+      <SearchTabs onSearch={handleSearch} />
 
-      {/* 오류 메시지 */}
       {error && (
-        <div className="bg-red-100 text-red-700 p-4 rounded-md mb-6">
+        <div className="bg-red-100 text-red-700 p-4 rounded-md my-6">
           {error}
         </div>
       )}
 
       {/* 사용자 테이블 */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
+      <div className="bg-white rounded-lg shadow-sm p-4 mt-6">
         {loading ? (
           <div className="text-center py-8">로딩 중...</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="py-3 px-4 text-center">상태</th>
-                  <th className="py-3 px-4 text-center">사용자명</th>
-                  <th className="py-3 px-4 text-center">닉네임</th>
-                  <th className="py-3 px-4 text-center">부서</th>
-                  <th className="py-3 px-4 text-center">직급</th>
-                  <th className="py-3 px-4 text-center">생성일</th>
-                  <th className="py-3 px-4 text-center text-red-500">삭제</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-10 text-center text-gray-500">
-                      사용자 정보가 없습니다
-                    </td>
-                  </tr>
-                ) : (
-                  users.map((user) => (
-                    <tr
-                      key={user.id}
-                      className="border-b border-gray-200 hover:bg-gray-50"
-                    >
-                      <td className="py-4 px-4 text-center">
-                        <button
-                          onClick={() => handleToggleLockStatus(user.id, user.isLocked)}
-                          className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center"
-                        >
-                          {user.isLocked ? (
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-red-500">
-                              <path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clipRule="evenodd" />
-                            </svg>
-                          ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-green-500">
-                              <path d="M18 1.5c2.9 0 5.25 2.35 5.25 5.25v3.75a.75.75 0 01-1.5 0V6.75a3.75 3.75 0 10-7.5 0v3a3 3 0 013 3v6.75a3 3 0 01-3 3H3.75a3 3 0 01-3-3v-6.75a3 3 0 013-3h9v-3c0-2.9 2.35-5.25 5.25-5.25z" />
-                            </svg>
-                          )}
-                        </button>
-                      </td>
-                      <td className="py-4 px-4 text-center">{user.username}</td>
-                      <td className="py-4 px-4 text-center">{user.nickname}</td>
-                      <td className="py-4 px-4 text-center">
-                        {departments.find((d) => d.id === user.departmentId)?.departmentName || "-"}
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        {positions.find((p) => p.id === user.positionId)?.positionName || "-"}
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-"}
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        <button
-                          onClick={() => handleDeleteUser(user.id)}
-                          className="text-red-500 hover:text-red-700 font-medium"
-                        >
-                          삭제
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <UserTable
+              users={users}
+              departments={departments}
+              positions={positions}
+              onResetPassword={resetPassword}
+              onToggleLock={toggleLockStatus}
+              onDeleteUser={deleteUser}
+            />
+            
+            {/* 페이지네이션 */}
+            {totalPages > 1 && (
+              <div className="mt-6 flex justify-center">
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-1 rounded ${
+                      currentPage === 1
+                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        : "bg-blue-500 text-white hover:bg-blue-600"
+                    }`}
+                  >
+                    이전
+                  </button>
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-1 rounded ${
+                          currentPage === page
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-200 hover:bg-gray-300"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className={`px-3 py-1 rounded ${
+                      currentPage === totalPages
+                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        : "bg-blue-500 text-white hover:bg-blue-600"
+                    }`}
+                  >
+                    다음
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

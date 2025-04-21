@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { SbPositionRepository } from "@/infra/repositories/supabase/SbPositionRepository";
 
 // 오류 타입 정의
 interface ErrorWithMessage {
@@ -33,27 +33,46 @@ function getErrorMessage(error: unknown): string {
 // GET 핸들러 (직급 목록 조회)
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    // 현재 사용자 정보 가져오기
+    const currentUserResponse = await fetch(
+      `${request.nextUrl.origin}/api/auth/me`,
+      {
+        headers: request.headers,
+      }
+    );
     
-    // 삭제되지 않은 직급만 가져오기
-    const { data, error } = await supabase
-      .from("position")
-      .select("*")
-      .is("deleted_at", null)
-      .order("position_name", { ascending: true });
-    
-    if (error) {
-      throw new Error(`직급 데이터 조회 실패: ${error.message}`);
+    if (!currentUserResponse.ok) {
+      return NextResponse.json(
+        { error: "인증되지 않은 사용자입니다" },
+        { status: 401 }
+      );
     }
     
+    const userData = await currentUserResponse.json();
+    const companyId = userData.user.businessNumber;
+
+    if (!companyId) {
+      return NextResponse.json(
+        { error: "회사 정보를 찾을 수 없습니다" },
+        { status: 400 }
+      );
+    }
+
+    // 직급 저장소 초기화
+    const positionRepository = new SbPositionRepository();
+    
+    // 해당 회사의 직급 가져오기
+    const positions = await positionRepository.getAllByCompany(companyId);
+    
     // 응답 데이터 형식 변환
-    const positions = data.map(pos => ({
-      id: pos.ID,
-      positionName: pos.position_name,
-      createdAt: pos.created_at
+    const formattedPositions = positions.map(pos => ({
+      id: pos.id,
+      positionName: pos.positionName,
+      createdAt: pos.createdAt,
+      companyId: pos.company_id
     }));
     
-    return NextResponse.json(positions);
+    return NextResponse.json(formattedPositions);
   } catch (error: unknown) {
     console.error("직급 목록 조회 중 오류 발생:", error);
     return NextResponse.json(

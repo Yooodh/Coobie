@@ -1,13 +1,16 @@
 import { Department } from "@/domain/entities/Department";
 import { DepartmentRepository } from "@/domain/repositories/DepartmentRepository";
 import { createBrowserSupabaseClient } from "@/utils/supabase/client";
-// import { createClient } from "@/utils/supabase/server";
-
 
 export class SbDepartmentRepository implements DepartmentRepository {
+  private supabase: any;
+
+  constructor() {
+    this.supabase = createBrowserSupabaseClient();
+  }
+
   async getAllByCompany(companyId: string): Promise<Department[]> {
-    const supabse = await  createBrowserSupabaseClient();
-    const { data, error } = await supabse
+    const { data, error } = await this.supabase
       .from("department")
       .select("*")
       .eq("company_id", companyId)
@@ -20,10 +23,11 @@ export class SbDepartmentRepository implements DepartmentRepository {
     return data.map(
       (dept) =>
         new Department(
-          dept.id,
+          dept.ID,
           dept.department_name,
           new Date(dept.created_at),
           dept.company_id,
+          dept.deleted_at ? new Date(dept.deleted_at) : undefined
         )
     );
   }

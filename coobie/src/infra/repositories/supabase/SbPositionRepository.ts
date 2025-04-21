@@ -1,13 +1,16 @@
 import { Position } from "@/domain/entities/Position";
 import { PositionRepository } from "@/domain/repositories/PositionRepository";
 import { createBrowserSupabaseClient } from "@/utils/supabase/client";
-// import { createClient } from "@/utils/supabase/server";
-
 
 export class SbPositionRepository implements PositionRepository {
+  private supabase: any;
+
+  constructor() {
+    this.supabase = createBrowserSupabaseClient();
+  }
+
   async getAllByCompany(companyId: string): Promise<Position[]> {
-  const supabase = await createBrowserSupabaseClient();
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from("position")
       .select("*")
       .eq("company_id", companyId)
@@ -20,10 +23,11 @@ export class SbPositionRepository implements PositionRepository {
     return data.map(
       (pos) =>
         new Position(
-          pos.id,
+          pos.ID,
           pos.position_name,
           new Date(pos.created_at),
-          pos.companyId
+          pos.company_id,
+          pos.deleted_at ? new Date(pos.deleted_at) : undefined
         )
     );
   }

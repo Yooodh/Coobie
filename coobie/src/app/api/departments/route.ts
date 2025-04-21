@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { SbDepartmentRepository } from "@/infra/repositories/supabase/SbDepartmentRepository";
 
 // 오류 타입 정의
 interface ErrorWithMessage {
@@ -33,27 +33,46 @@ function getErrorMessage(error: unknown): string {
 // GET 핸들러 (부서 목록 조회)
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    // 현재 사용자 정보 가져오기
+    const currentUserResponse = await fetch(
+      `${request.nextUrl.origin}/api/auth/me`,
+      {
+        headers: request.headers,
+      }
+    );
     
-    // 삭제되지 않은 부서만 가져오기
-    const { data, error } = await supabase
-      .from("department")
-      .select("*")
-      .is("deleted_at", null)
-      .order("department_name", { ascending: true });
-    
-    if (error) {
-      throw new Error(`부서 데이터 조회 실패: ${error.message}`);
+    if (!currentUserResponse.ok) {
+      return NextResponse.json(
+        { error: "인증되지 않은 사용자입니다" },
+        { status: 401 }
+      );
     }
     
+    const userData = await currentUserResponse.json();
+    const companyId = userData.user.businessNumber;
+
+    if (!companyId) {
+      return NextResponse.json(
+        { error: "회사 정보를 찾을 수 없습니다" },
+        { status: 400 }
+      );
+    }
+
+    // 부서 저장소 초기화
+    const departmentRepository = new SbDepartmentRepository();
+    
+    // 해당 회사의 부서 가져오기
+    const departments = await departmentRepository.getAllByCompany(companyId);
+    
     // 응답 데이터 형식 변환
-    const departments = data.map(dept => ({
-      id: dept.ID,
-      departmentName: dept.department_name,
-      createdAt: dept.created_at
+    const formattedDepartments = departments.map(dept => ({
+      id: dept.id,
+      departmentName: dept.departmentName,
+      createdAt: dept.createdAt,
+      companyId: dept.company_id
     }));
     
-    return NextResponse.json(departments);
+    return NextResponse.json(formattedDepartments);
   } catch (error: unknown) {
     console.error("부서 목록 조회 중 오류 발생:", error);
     return NextResponse.json(
