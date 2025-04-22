@@ -8,8 +8,9 @@ export class UserFilter {
 		public roleId?: string,
 		public isLocked?: boolean,
 		public isApproved?: boolean,
+		public businessNumber?:string,
 		public offset?: number,
-		public limit?: number,  
+		public limit?: number,
 	) {
 		this.offset = offset ?? 0;
 		this.limit = limit ?? 10;
