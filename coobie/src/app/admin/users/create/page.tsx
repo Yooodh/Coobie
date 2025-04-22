@@ -87,29 +87,6 @@ useEffect(() => {
 
 
   // 부서, 직급 데이터 가져오기
-  // useEffect(() => {
-  //   const fetchOptions = async () => {
-  //     try {
-  //       // 부서 목록 가져오기
-  //       const deptResponse = await fetch("/api/departments");
-  //       if (deptResponse.ok) {
-  //         const deptData = await deptResponse.json();
-  //         setDepartments(deptData);
-  //       }
-
-  //       // 직급 목록 가져오기
-  //       const posResponse = await fetch("/api/positions");
-  //       if (posResponse.ok) {
-  //         const posData = await posResponse.json();
-  //         setPositions(posData);
-  //       }
-  //     } catch (err) {
-  //       console.error("옵션 데이터를 불러오는 중 오류 발생:", err);
-  //     }
-  //   };
-
-  //   fetchOptions();
-  // }, []);
   useEffect(() => {
     const fetchOptions = async () => {
       try {
@@ -270,8 +247,8 @@ useEffect(() => {
               </label>
               <input
                 type="text"
-                name="username"
-                value={formData.username}
+                name="nickname"
+                value={formData.nickname}
                 onChange={handleChange}
                 required
                 className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
@@ -286,8 +263,8 @@ useEffect(() => {
               </label>
               <input
                 type="text"
-                name="nickname"
-                value={formData.nickname}
+                name="username"
+                value={formData.username}
                 onChange={handleChange}
                 required
                 className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
