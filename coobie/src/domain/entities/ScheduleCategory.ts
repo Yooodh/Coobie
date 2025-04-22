@@ -1,3 +1,6 @@
 export class ScheduleCategory {
-  constructor(public id: number, public scheduleType: string) {}
+  constructor(
+    public readonly id: number,
+    public readonly scheduleType: string
+  ) {}
 }
