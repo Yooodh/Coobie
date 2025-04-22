@@ -122,7 +122,6 @@ export class SbUserRepository implements UserRepository {
 
   async save(user: User): Promise<User> {
     const userData = {
-      ID: user.id,
       username: user.username,
       nickname: user.nickname,
       password: user.password,
