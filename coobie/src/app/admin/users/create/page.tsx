@@ -10,6 +10,7 @@ export default function CreateUserPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   // 폼 데이터
   const [formData, setFormData] = useState({
@@ -25,66 +26,81 @@ export default function CreateUserPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
 
-  // admin/users/page.tsx와 admin/users/create/page.tsx에 추가할 디버깅 코드
+  // 현재 로그인한 사용자 정보를 가져오는 함수 추가
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await fetch("/api/auth/me");
+        if (!response.ok) {
+          throw new Error("인증된 사용자 정보를 가져오는데 실패했습니다.");
+        }
+        const data = await response.json();
+        setCurrentUser(data.user);
+      } catch (err) {
+        console.error("사용자 정보를 불러오는 중 오류 발생:", err);
+        setError("사용자 정보를 불러오는데 실패했습니다");
+      }
+    };
+    fetchCurrentUser();
+  }, []);
 
-// 부서와 직급 정보 요청 및 로그 출력
-const fetchDepartmentsAndPositions = async () => {
-  try {
-    console.log("부서 및 직급 정보 요청 시작");
-    
-    // 현재 로그인된 사용자 정보 확인
-    const meResponse = await fetch("/api/auth/me");
-    const meData = await meResponse.json();
-    console.log("현재 로그인된 사용자 정보:", meData);
-    
-    // 부서 정보 요청
-    console.log("부서 정보 요청 시작");
-    const deptResponse = await fetch("/api/departments");
-    console.log("부서 응답 상태:", deptResponse.status);
-    
-    if (deptResponse.ok) {
-      const deptData = await deptResponse.json();
-      console.log("부서 데이터:", deptData);
-      setDepartments(deptData);
-    } else {
-      const errorText = await deptResponse.text();
-      console.error("부서 정보 요청 실패:", errorText);
-    }
+  // // 부서와 직급 정보 요청 및 로그 출력
+  // const fetchDepartmentsAndPositions = async () => {
+  //   try {
+  //     console.log("부서 및 직급 정보 요청 시작");
 
-    // 직급 정보 요청
-    console.log("직급 정보 요청 시작");
-    const posResponse = await fetch("/api/positions");
-    console.log("직급 응답 상태:", posResponse.status);
-    
-    if (posResponse.ok) {
-      const posData = await posResponse.json();
-      console.log("직급 데이터:", posData);
-      setPositions(posData);
-    } else {
-      const errorText = await posResponse.text();
-      console.error("직급 정보 요청 실패:", errorText);
-    }
-  } catch (err) {
-    console.error("부서/직급 정보를 불러오는 중 오류 발생:", err);
-  }
-};
+  //     // 현재 로그인된 사용자 정보 확인
+  //     const meResponse = await fetch("/api/auth/me");
+  //     const meData = await meResponse.json();
+  //     console.log("현재 로그인된 사용자 정보:", meData);
 
-// 사용자 정보에서 businessNumber 확인
-useEffect(() => {
-  const checkUserInfo = async () => {
-    try {
-      const response = await fetch("/api/auth/me");
-      const userData = await response.json();
-      console.log("사용자 정보:", userData);
-      console.log("Business Number:", userData.user.businessNumber);
-    } catch (err) {
-      console.error("사용자 정보 확인 중 오류:", err);
-    }
-  };
-  
-  checkUserInfo();
-}, []);
+  //     // 부서 정보 요청
+  //     console.log("부서 정보 요청 시작");
+  //     const deptResponse = await fetch("/api/departments");
+  //     console.log("부서 응답 상태:", deptResponse.status);
 
+  //     if (deptResponse.ok) {
+  //       const deptData = await deptResponse.json();
+  //       console.log("부서 데이터:", deptData);
+  //       setDepartments(deptData);
+  //     } else {
+  //       const errorText = await deptResponse.text();
+  //       console.error("부서 정보 요청 실패:", errorText);
+  //     }
+
+  //     // 직급 정보 요청
+  //     console.log("직급 정보 요청 시작");
+  //     const posResponse = await fetch("/api/positions");
+  //     console.log("직급 응답 상태:", posResponse.status);
+
+  //     if (posResponse.ok) {
+  //       const posData = await posResponse.json();
+  //       console.log("직급 데이터:", posData);
+  //       setPositions(posData);
+  //     } else {
+  //       const errorText = await posResponse.text();
+  //       console.error("직급 정보 요청 실패:", errorText);
+  //     }
+  //   } catch (err) {
+  //     console.error("부서/직급 정보를 불러오는 중 오류 발생:", err);
+  //   }
+  // };
+
+  // // 사용자 정보에서 businessNumber 확인
+  // useEffect(() => {
+  //   const checkUserInfo = async () => {
+  //     try {
+  //       const response = await fetch("/api/auth/me");
+  //       const userData = await response.json();
+  //       console.log("사용자 정보:", userData);
+  //       console.log("Business Number:", userData.user.businessNumber);
+  //     } catch (err) {
+  //       console.error("사용자 정보 확인 중 오류:", err);
+  //     }
+  //   };
+
+  //   checkUserInfo();
+  // }, []);
 
   // 부서, 직급 데이터 가져오기
   useEffect(() => {
@@ -92,16 +108,19 @@ useEffect(() => {
       try {
         // 사용자 정보 먼저 가져오기 (토큰 검증을 위해)
         const userResponse = await fetch("/api/auth/me");
-        
+
         if (!userResponse.ok) {
-          console.error("사용자 정보를 가져오는데 실패했습니다:", userResponse.status);
+          console.error(
+            "사용자 정보를 가져오는데 실패했습니다:",
+            userResponse.status
+          );
           return;
         }
-        
+
         const userData = await userResponse.json();
         console.log("현재 사용자 정보:", userData);
         console.log("Business Number:", userData.user.businessNumber);
-        
+
         // 부서 및 직급 정보 가져오기
         // 부서 목록 가져오기
         const deptResponse = await fetch("/api/departments", {
@@ -109,48 +128,54 @@ useEffect(() => {
             "Cache-Control": "no-cache", // 캐시 방지
           },
         });
-        
+
         console.log("부서 응답 상태:", deptResponse.status);
-        
+
         if (deptResponse.ok) {
           const deptData = await deptResponse.json();
           console.log("부서 데이터:", deptData);
-          
+
           if (Array.isArray(deptData)) {
             setDepartments(deptData);
           } else {
             console.error("부서 데이터 형식이 잘못되었습니다:", deptData);
           }
         } else {
-          console.error("부서 정보를 가져오는데 실패했습니다:", await deptResponse.text());
+          console.error(
+            "부서 정보를 가져오는데 실패했습니다:",
+            await deptResponse.text()
+          );
         }
-  
+
         // 직급 목록 가져오기
         const posResponse = await fetch("/api/positions", {
           headers: {
             "Cache-Control": "no-cache", // 캐시 방지
           },
         });
-        
+
         console.log("직급 응답 상태:", posResponse.status);
-        
+
         if (posResponse.ok) {
           const posData = await posResponse.json();
           console.log("직급 데이터:", posData);
-          
+
           if (Array.isArray(posData)) {
             setPositions(posData);
           } else {
             console.error("직급 데이터 형식이 잘못되었습니다:", posData);
           }
         } else {
-          console.error("직급 정보를 가져오는데 실패했습니다:", await posResponse.text());
+          console.error(
+            "직급 정보를 가져오는데 실패했습니다:",
+            await posResponse.text()
+          );
         }
       } catch (err) {
         console.error("옵션 데이터를 불러오는 중 오류 발생:", err);
       }
     };
-  
+
     fetchOptions();
   }, []);
 
@@ -177,6 +202,11 @@ useEffect(() => {
       setLoading(false);
       return;
     }
+    if (!currentUser || !currentUser.businessNumber) {
+      setError("사용자 정보를 불러오는데 실패했습니다");
+      setLoading(false);
+      return;
+    }
 
     try {
       // 사용자 생성 API 호출
@@ -197,6 +227,7 @@ useEffect(() => {
             ? parseInt(formData.positionId)
             : undefined,
           roleId: "02", // 사원 역할 ID 고정
+          businessNumber: currentUser.businessNumber,
         }),
       });
 

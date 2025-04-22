@@ -135,9 +135,6 @@ export default function SettingsPage() {
       try {
         const response = await fetch("/api/auth/me");
         const userData = await response.json();
-        console.log("사용자 정보:", userData);
-        console.log("Business Number:", userData.user.businessNumber);
-        // 여기서 회사 ID 조회를 시도해볼 수 있습니다
       } catch (err) {
         console.error("사용자 정보 조회 실패:", err);
       }

@@ -8,7 +8,6 @@ import { Position } from "@/domain/entities/Position";
 import SearchTabs from "@/app/components/admin/SearchTabs";
 import UserTable from "@/app/components/admin/UserTable";
 import { LogoutUseCase } from "@/application/usecases/auth/LogoutUseCase";
-import router from "next/router";
 
 export default function UserManagementPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -21,7 +20,87 @@ export default function UserManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchType, setSearchType] = useState("전체");
   const [loggingOut, setLoggingOut] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
+  // 현재 로그인한 사용자 정보 가져오기
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await fetch("/api/auth/me");
+        if (!response.ok) {
+          throw new Error("인증된 사용자 정보를 가져오는데 실패했습니다");
+        }
+        const data = await response.json();
+        setCurrentUser(data.user);
+      } catch (err) {
+        console.error("사용자 정보를 불러오는 중 오류 발생:", err);
+        setError("사용자 정보를 불러오는데 실패했습니다.");
+      }
+    };
+    fetchCurrentUser();
+  }, []);
+
+  // 사용자 목록 가져오기
+  const fetchUsers = async () => {
+    if (!currentUser || !currentUser.businessNumber) {
+      console.error("사업자 번호를 가져올 수 없습니다.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const queryParams = new URLSearchParams();
+
+      // 페이지네이션 추가
+      queryParams.append("page", currentPage.toString());
+      queryParams.append("limit", "10");
+
+      // 역할 ID 고정 (일반 사용자만)
+      queryParams.append("roleId", "02");
+
+      queryParams.append("businessNumber", currentUser.businessNumber);
+
+      console.log("요청 URL:", `/api/users?${queryParams.toString()}`);
+
+
+      // 필터 추가
+      if (searchTerm) {
+        if (searchType === "이름") {
+          queryParams.append("nickname", searchTerm);
+        } else if (searchType === "아이디") {
+          queryParams.append("username", searchTerm);
+        } else {
+          // 전체 검색
+          queryParams.append("username", searchTerm);
+        }
+      }
+
+      const response = await fetch(`/api/users?${queryParams.toString()}`);
+
+      if (!response.ok) {
+        throw new Error(`오류: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("사용자 데이터:", data);
+      setUsers(data.users);
+      setTotalPages(data.totalPages);
+    } catch (err: any) {
+      setError(err.message || "사용자 목록을 불러오는데 실패했습니다");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 현재 사용자 정보가 변경될 때 사용자 목록 다시 가져오기
+  useEffect(() => {
+    if (currentUser && currentUser.businessNumber) {
+      fetchDepartmentsAndPositions();
+      fetchUsers();
+    }
+  }, [currentUser, currentPage, searchTerm, searchType])
+
+  // 부서 및 직급 정보 가져오기
   const fetchDepartmentsAndPositions = async () => {
     try {
       // 사용자 정보 먼저 가져오기 (토큰 검증을 위해)
@@ -91,70 +170,38 @@ export default function UserManagementPage() {
     }
   };
 
-  useEffect(() => {
-    const checkUserInfo = async () => {
-      try {
-        const response = await fetch("/api/auth/me");
-        const userData = await response.json();
-        console.log("사용자 정보:", userData);
-        console.log("Business Number:", userData.user.businessNumber);
-      } catch (err) {
-        console.error("사용자 정보 확인 중 오류:", err);
-      }
-    };
+  // useEffect(() => {
+  //   const checkUserInfo = async () => {
+  //     try {
+  //       const response = await fetch("/api/auth/me");
+  //       const userData = await response.json();
+  //       console.log("사용자 정보:", userData);
+  //       console.log("Business Number:", userData.user.businessNumber);
+  //     } catch (err) {
+  //       console.error("사용자 정보 확인 중 오류:", err);
+  //     }
+  //   };
 
-    checkUserInfo();
-  }, []);
+  //   checkUserInfo();
+  // }, []);
 
-  // 사용자 목록 가져오기
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      const queryParams = new URLSearchParams();
+  // // 현재 사용자 정보가 변경될 때 사용자 목록 다시 가져오기
+  // useEffect(() => {
+  //   if (currentUser && currentUser.businessNumber) {
+  //     fetchDepartmentsAndPositions();
+  //     fetchUsers();
+  //   }
+  // }, [currentUser, currentPage, searchTerm, searchType]);
 
-      // 페이지네이션 추가
-      queryParams.append("page", currentPage.toString());
-      queryParams.append("limit", "10");
+  // // useEffect(() => {
+  // //   fetchDepartmentsAndPositions();
+  // // }, []);
 
-      // 역할 ID 고정 (일반 사용자만)
-      queryParams.append("roleId", "02");
+  // // useEffect(() => {
+  // //   fetchUsers();
+  // // }, [currentPage, searchTerm, searchType]);
 
-      // 필터 추가
-      if (searchTerm) {
-        if (searchType === "이름") {
-          queryParams.append("nickname", searchTerm);
-        } else if (searchType === "아이디") {
-          queryParams.append("username", searchTerm);
-        } else {
-          // 전체 검색
-          queryParams.append("username", searchTerm);
-        }
-      }
-
-      const response = await fetch(`/api/users?${queryParams.toString()}`);
-
-      if (!response.ok) {
-        throw new Error(`오류: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("사용자 데이터:", data);
-      setUsers(data.users);
-      setTotalPages(data.totalPages);
-    } catch (err: any) {
-      setError(err.message || "사용자 목록을 불러오는데 실패했습니다");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDepartmentsAndPositions();
-  }, []);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [currentPage, searchTerm, searchType]);
+  
 
   const handleSearch = (term: string, type: string) => {
     setSearchTerm(term);
@@ -241,7 +288,7 @@ export default function UserManagementPage() {
         setLoggingOut(true);
         const logoutUseCase = new LogoutUseCase();
         const success = await logoutUseCase.execute();
-        
+
         if (success) {
           // 클라이언트 측 라우팅 (useRouter 사용)
           window.location.href = "/"; // 리다이렉션을 window.location으로 변경
@@ -253,7 +300,6 @@ export default function UserManagementPage() {
       }
     }
   };
-  
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
