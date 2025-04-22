@@ -235,13 +235,17 @@ export default function UserManagementPage() {
     }
   };
 
-  const handleLogOut = async () => {
+  const handleLogout = async () => {
     if (confirm("정말 로그아웃 하시겠습니까?")) {
       try {
         setLoggingOut(true);
         const logoutUseCase = new LogoutUseCase();
-        await logoutUseCase.execute();
-        router.push("/");
+        const success = await logoutUseCase.execute();
+        
+        if (success) {
+          // 클라이언트 측 라우팅 (useRouter 사용)
+          window.location.href = "/"; // 리다이렉션을 window.location으로 변경
+        }
       } catch (err: any) {
         setError(err.message || "로그아웃 중 오류가 발생했습니다");
       } finally {
@@ -249,6 +253,7 @@ export default function UserManagementPage() {
       }
     }
   };
+  
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -262,7 +267,7 @@ export default function UserManagementPage() {
           </div>
         </div>
         <button
-          onClick={handleLogOut}
+          onClick={handleLogout}
           disabled={loggingOut}
           className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-md transition-colors"
         >
