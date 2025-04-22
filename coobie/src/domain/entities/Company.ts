@@ -1,9 +1,10 @@
 export class Company {
   constructor(
-    public Id: string,
+    public id: string,
     public companyName: string,
-    public businessNumber: string,
-    public isLocked: boolean,
-    public deletedAt: Date
+    public isLocked: boolean = false,
+    public userId: string,     // 관리자 사용자 ID 참조
+    public roleId: string,     // 역할 ID
+    public deletedAt?: Date
   ) {}
 }
