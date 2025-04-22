@@ -1,5 +1,4 @@
 import { UserRepository } from "@/domain/repositories/UserRepository";
-import { useId } from "react";
 
 export class ResetPasswordUseCase {
   constructor(private userRepository: UserRepository) {}
