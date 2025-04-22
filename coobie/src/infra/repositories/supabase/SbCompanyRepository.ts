@@ -6,42 +6,88 @@ import { createBrowserSupabaseClient } from "@/utils/supabase/client";
 
 
 export class SbCompanyRepository implements CompanyRepository {
+  // async count(filter?: CompanyFilter): Promise<number> {
+  //   const supabase = await createBrowserSupabaseClient();
+
+  //   let query = supabase
+  //     .from("company")
+  //     .select("*", { count: "exact", head: true });
+
+  //   if (filter) {
+  //     if (filter.companyName) {
+  //       query = query.ilike("company_name", `%${filter.companyName}%`);
+  //     }
+  //     if (filter.businessNumber) {
+  //       query = query.eq("business_number", filter.businessNumber);
+  //     }
+  //     if (filter.isLocked !== undefined) {
+  //       query = query.eq("is_locked", filter.isLocked);
+  //     }
+  //     if (filter.isApproved !== undefined) {
+  //       query = query.eq("user.is_approved", filter.isApproved);
+  //     }
+  //   }
+
+  //   const { count, error } = await query;
+
+  //   if (error) {
+  //     throw new Error(`Failed to count companies: ${error.message}`);
+  //   }
+
+  //   return count || 0;
+  // }
+
+  // async findAll(filter?: CompanyFilter): Promise<Company[]> {
+  //   const supabase = await createBrowserSupabaseClient();
+
+  //   let query = supabase.from("company").select("*").is("deleted_at", null);
+
+  //   if (filter) {
+  //     if (filter.companyName) {
+  //       query = query.ilike("company_name", `%${filter.companyName}%`);
+  //     }
+  //     if (filter.businessNumber) {
+  //       query = query.eq("business_number", filter.businessNumber);
+  //     }
+  //     if (filter.isLocked !== undefined) {
+  //       query = query.eq("is_locked", filter.isLocked);
+  //     }
+  //     if (filter.isApproved !== undefined) {
+  //       query = query.eq("is_approved", filter.isApproved);
+  //     }
+
+  //     const offset = filter.offset ?? 0;
+  //     const limit = filter.limit ?? 10;
+  //     query = query.range(offset, offset + limit - 1);
+  //   }
+
+  //   const { data, error } = await query;
+
+  //   if (error) {
+  //     throw new Error(`Failed to fetch companies: ${error.message}`);
+  //   }
+
+  //   return data.map((company) => {
+  //     return {
+  //       id: company.ID,
+  //       companyName: company.company_name,
+  //       businessNumber: company.business_number,
+  //       isLocked: company.is_locked,
+  //       deletedAt: company.deleted_at ? new Date(company.deleted_at) : null,
+  //     } as unknown as Company;
+  //   });
+  // }
   async count(filter?: CompanyFilter): Promise<number> {
-    const supabase = await createBrowserSupabaseClient();
-
-    let query = supabase
-      .from("company")
-      .select("*", { count: "exact", head: true });
-
-    if (filter) {
-      if (filter.companyName) {
-        query = query.ilike("company_name", `%${filter.companyName}%`);
-      }
-      if (filter.businessNumber) {
-        query = query.eq("business_number", filter.businessNumber);
-      }
-      if (filter.isLocked !== undefined) {
-        query = query.eq("is_locked", filter.isLocked);
-      }
-      if (filter.isApproved !== undefined) {
-        query = query.eq("is_approved", filter.isApproved);
-      }
-    }
-
-    const { count, error } = await query;
-
-    if (error) {
-      throw new Error(`Failed to count companies: ${error.message}`);
-    }
-
-    return count || 0;
+    // 가장 간단한 해결책은 findAll을 호출하고 결과의 길이를 반환하는 것입니다
+    const companies = await this.findAll(filter);
+    return companies.length;
   }
-
   async findAll(filter?: CompanyFilter): Promise<Company[]> {
     const supabase = await createBrowserSupabaseClient();
-
+  
+    // 먼저 회사 데이터 가져오기 (조인 없이)
     let query = supabase.from("company").select("*").is("deleted_at", null);
-
+  
     if (filter) {
       if (filter.companyName) {
         query = query.ilike("company_name", `%${filter.companyName}%`);
@@ -52,30 +98,64 @@ export class SbCompanyRepository implements CompanyRepository {
       if (filter.isLocked !== undefined) {
         query = query.eq("is_locked", filter.isLocked);
       }
-      if (filter.isApproved !== undefined) {
-        query = query.eq("is_approved", filter.isApproved);
+    }
+  
+    const { data: companies, error: companyError } = await query;
+  
+    if (companyError) {
+      throw new Error(`Failed to fetch companies: ${companyError.message}`);
+    }
+  
+    if (!companies || companies.length === 0) {
+      return [];
+    }
+  
+    // 회사 ID와 관련된 사용자 데이터 가져오기
+    const userIds = companies.map(company => company.user_id).filter(Boolean);
+    
+    if (userIds.length === 0) {
+      return [];
+    }
+  
+    const { data: users, error: userError } = await supabase
+      .from("user")
+      .select("*")
+      .in("ID", userIds);
+  
+    if (userError) {
+      throw new Error(`Failed to fetch user data: ${userError.message}`);
+    }
+  
+    // 회사 데이터와 사용자 데이터 병합
+    const result = companies.map(company => {
+      const user = users.find(u => u.ID === company.user_id) || {};
+      
+      // 필터링 조건 적용
+      if (filter?.isApproved !== undefined && user.is_approved !== filter.isApproved) {
+        return null;
       }
-
-      const offset = filter.offset ?? 0;
-      const limit = filter.limit ?? 10;
-      query = query.range(offset, offset + limit - 1);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      throw new Error(`Failed to fetch companies: ${error.message}`);
-    }
-
-    return data.map((company) => {
+      
       return {
         id: company.ID,
         companyName: company.company_name,
-        businessNumber: company.business_number,
+        businessNumber: user.business_number || "",
         isLocked: company.is_locked,
-        deletedAt: company.deleted_at ? new Date(company.deleted_at) : null,
-      } as unknown as Company;
-    });
+        isApproved: user.is_approved || false,
+        createdAt: user.created_at,
+        userId: company.user_id,
+        roleId: company.role_id,
+        deletedAt: company.deleted_at ? new Date(company.deleted_at) : undefined,
+      };
+    }).filter(Boolean) as Company[];
+  
+    // 페이지네이션 처리
+    if (filter?.offset !== undefined && filter?.limit !== undefined) {
+      const start = filter.offset;
+      const end = start + filter.limit;
+      return result.slice(start, end);
+    }
+  
+    return result;
   }
 
   async findById(id: string): Promise<Company | null> {
