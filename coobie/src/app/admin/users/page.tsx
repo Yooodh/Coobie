@@ -20,7 +20,7 @@ export default function UserManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchType, setSearchType] = useState("전체");
   const [loggingOut, setLoggingOut] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<unknown>(null);
 
   // 현재 로그인한 사용자 정보 가져오기
   useEffect(() => {

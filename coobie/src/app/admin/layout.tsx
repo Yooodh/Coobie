@@ -30,7 +30,7 @@ export default function AdminLayout({ children }: PropsWithChildren) {
           <Link
             href="/admin/users"
             className={`py-3 px-6 border-t border-b border-amber-400 ${
-              pathname === "/admin/users" ? "font-bold" : ""
+              pathname === "/admin/users" ? "font-bold text-white" : ""
             }`}
           >
             사원 관리
@@ -38,7 +38,7 @@ export default function AdminLayout({ children }: PropsWithChildren) {
           <Link
             href="/admin/users/create"
             className={`py-3 px-6 border-b border-amber-400 ${
-              pathname === "/admin/users/create" ? "font-bold" : ""
+              pathname === "/admin/users/create" ? "font-bold text-white" : ""
             }`}
           >
             사원 등록
@@ -46,7 +46,7 @@ export default function AdminLayout({ children }: PropsWithChildren) {
           <Link
             href="/admin/settings"
             className={`py-3 px-6 border-b border-amber-400 ${
-              pathname === "/admin/settings" ? "font-bold" : ""
+              pathname === "/admin/settings" ? "font-bold text-white" : ""
             }`}
           >
             설정
@@ -55,7 +55,7 @@ export default function AdminLayout({ children }: PropsWithChildren) {
       </div>
 
       {/* 메인 콘텐츠 */}
-      <div className="flex-1 overflow-y-auto bg-gray-50">{children}</div>
+      <div className="flex-1 overflow-y-auto bg-black-500">{children}</div>
     </div>
   );
 }
