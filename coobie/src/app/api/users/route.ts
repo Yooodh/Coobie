@@ -11,16 +11,16 @@ interface ErrorWithMessage {
 
 function isErrorWithMessage(error: unknown): error is ErrorWithMessage {
   return (
-    typeof error === 'object' &&
+    typeof error === "object" &&
     error !== null &&
-    'message' in error &&
-    typeof (error as Record<string, unknown>).message === 'string'
+    "message" in error &&
+    typeof (error as Record<string, unknown>).message === "string"
   );
 }
 
 function toErrorWithMessage(maybeError: unknown): ErrorWithMessage {
   if (isErrorWithMessage(maybeError)) return maybeError;
-  
+
   try {
     return new Error(JSON.stringify(maybeError));
   } catch {
@@ -37,25 +37,32 @@ function getErrorMessage(error: unknown): string {
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    
+
     // 필터 매개변수 추출
     const username = searchParams.get("username") || undefined;
     const nickname = searchParams.get("nickname") || undefined;
-    const departmentId = searchParams.get("departmentId") 
-      ? parseInt(searchParams.get("departmentId")!) 
+    const departmentId = searchParams.get("departmentId")
+      ? parseInt(searchParams.get("departmentId")!)
       : undefined;
-    const positionId = searchParams.get("positionId") 
-      ? parseInt(searchParams.get("positionId")!) 
+    const positionId = searchParams.get("positionId")
+      ? parseInt(searchParams.get("positionId")!)
       : undefined;
-    const status = searchParams.get("status") as "online" | "offline" | "busy" | "away" | undefined;
+    const status = searchParams.get("status") as
+      | "online"
+      | "offline"
+      | "busy"
+      | "away"
+      | undefined;
     const roleId = searchParams.get("roleId") || undefined;
-    const isLocked = searchParams.has("isLocked") 
-      ? searchParams.get("isLocked") === "true" 
+    const isLocked = searchParams.has("isLocked")
+      ? searchParams.get("isLocked") === "true"
       : undefined;
-    const isApproved = searchParams.has("isApproved") 
-      ? searchParams.get("isApproved") === "true" 
+    const isApproved = searchParams.has("isApproved")
+      ? searchParams.get("isApproved") === "true"
       : undefined;
-    
+
+    const businessNumber = searchParams.get("businessNumber") || undefined;
+
     // 페이지네이션
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
@@ -71,9 +78,27 @@ export async function GET(request: NextRequest) {
       roleId,
       isLocked,
       isApproved,
+      businessNumber,
       offset,
       limit
     );
+
+    console.log("요청 파라미터:", {
+      username,
+      nickname,
+      departmentId,
+      positionId,
+      status,
+      roleId,
+      isLocked,
+      isApproved,
+      businessNumber // 이 값이 올바르게 전달되는지 확인
+    });
+    
+    // 필터 객체 생성 후
+    console.log("생성된 필터:", filter);
+
+
 
     // 저장소 및 유스케이스 초기화
     const userRepository = new SbUserRepository();
@@ -86,7 +111,10 @@ export async function GET(request: NextRequest) {
   } catch (error: unknown) {
     console.error("사용자 목록 조회 중 오류 발생:", error);
     return NextResponse.json(
-      { error: getErrorMessage(error) || "사용자 목록을 불러오는데 실패했습니다" },
+      {
+        error:
+          getErrorMessage(error) || "사용자 목록을 불러오는데 실패했습니다",
+      },
       { status: 500 }
     );
   }
@@ -96,12 +124,29 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, username, nickname, password, departmentId, positionId, roleId } = body;
+    const {
+      id,
+      username,
+      nickname,
+      password,
+      departmentId,
+      positionId,
+      roleId,
+      businessNumber,
+    } = body;
 
     // 필수 필드 검증
     if (!username || !nickname || !password) {
       return NextResponse.json(
         { error: "사용자명, 닉네임, 비밀번호는 필수 입력 항목입니다" },
+        { status: 400 }
+      );
+    }
+
+    // 사업자 번호 검증 추가
+    if (!businessNumber) {
+      return NextResponse.json(
+        { error: "사업자 번호는 필수 입력 항목입니다." },
         { status: 400 }
       );
     }
@@ -118,7 +163,8 @@ export async function POST(request: NextRequest) {
       password,
       departmentId,
       positionId,
-      roleId || "02" // roleId가 제공되지 않으면 기본값 "02" 사용
+      roleId || "02", // roleId가 제공되지 않으면 기본값 "02" 사용
+      businessNumber
     );
 
     return NextResponse.json(newUser, { status: 201 });
