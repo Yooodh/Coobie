@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { PropsWithChildren } from "react";
 
@@ -12,8 +13,16 @@ export default function AdminLayout({ children }: PropsWithChildren) {
       {/* 사이드바 */}
       <div className="w-64 bg-amber-300 flex flex-col">
         {/* 로고 */}
-        <div className="p-6">
-          <h1 className="text-4xl font-bold text-gray-800">COOBIE</h1>
+        <div className="p-10 flex">
+          <Link href="/">
+            <Image
+              src="/images/Coobie_logo.png"
+              alt="Coobie Logo"
+              width={150}
+              height={60}
+              priority
+            />
+          </Link>
         </div>
 
         {/* 메뉴 링크 */}
