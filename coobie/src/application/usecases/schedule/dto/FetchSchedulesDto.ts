@@ -1,16 +1,16 @@
-// application/usecases/schedule/dto/FetchSchedulesDto.ts
 import { Schedule } from "@/domain/entities/Schedule";
 import { MoveScheduleToCategoryDto } from "./MoveScheduleToCategoryDto";
 
 export class FetchSchedulesDto {
   constructor(
-    public id: number,
-    public userId: string,
-    public startAt: Date,
-    public date: Date,
-    public deletedAt: Date | null,
-    public scheduleCategoryId: number,
-    public category?: MoveScheduleToCategoryDto
+    public readonly id: number,
+    public readonly userId: string,
+    public readonly startAt: Date,
+    public readonly endedAt: Date | null,
+    public readonly date: Date,
+    public readonly deletedAt: Date | null,
+    public readonly scheduleCategoryId: number,
+    public readonly category?: MoveScheduleToCategoryDto
   ) {}
 }
 
@@ -19,7 +19,8 @@ export function toFetchSchedulesDto(schedule: Schedule): FetchSchedulesDto {
   return new FetchSchedulesDto(
     schedule.id,
     schedule.userId,
-    schedule.startAt,
+    schedule.startedAt,
+    schedule.endedAt,
     schedule.date,
     schedule.deletedAt,
     schedule.scheduleCategoryId,
