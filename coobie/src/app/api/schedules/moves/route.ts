@@ -8,9 +8,10 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const { scheduleId, newCategoryId } = body;
 
-    if (!scheduleId || !newCategoryId) {
+    // 필수 필드 & 타입 검증
+    if (typeof scheduleId !== "number" || typeof newCategoryId !== "number") {
       return NextResponse.json(
-        { error: "scheduleId와 newCategoryId가 필요합니다." },
+        { error: "유효하지 않은 ID 형식입니다." },
         { status: 400 }
       );
     }
@@ -29,9 +30,4 @@ export async function PATCH(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-// POST도 PATCH와 동일하게 동작하도록 할 수 있음
-export async function POST(request: NextRequest) {
-  return PATCH(request);
 }
