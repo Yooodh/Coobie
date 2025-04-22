@@ -72,15 +72,24 @@ export class SbUserRepository implements UserRepository {
       if (filter.isApproved !== undefined) {
         query = query.eq("is_approved", filter.isApproved);
       }
+      if (filter.businessNumber) {
+        console.log("사업자 번호로 필터링", filter.businessNumber)
+        query = query.eq("business_number", filter.businessNumber);
+      }
       
       const offset = filter.offset ?? 0;
       const limit = filter.limit ?? 10;
       query = query.range(offset, offset + limit - 1);
+
+      console.log("최종 쿼리:", query);
     }
 
     const { data, error } = await query;
 
+    console.log("쿼리 결과 수:", data?.length);
+
     if (error) {
+      console.error("쿼리 오류:", error);
       throw new Error(`사용자 목록을 가져오는 중 오류 발생: ${error.message}`);
     }
 
@@ -104,6 +113,9 @@ export class SbUserRepository implements UserRepository {
       }
       if (filter.isApproved !== undefined) {
         query = query.eq("is_approved", filter.isApproved);
+      }
+      if (filter.businessNumber) {
+        query = query.eq("business_number", filter.businessNumber);
       }
       
       const offset = filter.offset ?? 0;
@@ -203,6 +215,9 @@ export class SbUserRepository implements UserRepository {
       }
       if (filter.isApproved !== undefined) {
         query = query.eq("is_approved", filter.isApproved);
+      }
+      if (filter.businessNumber) {
+        query=query.eq("business_number", filter.businessNumber)
       }
     }
 
