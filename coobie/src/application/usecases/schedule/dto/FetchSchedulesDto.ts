@@ -5,8 +5,8 @@ export class FetchSchedulesDto {
   constructor(
     public readonly id: number,
     public readonly userId: string,
-    public readonly startAt: Date,
-    public readonly endedAt: Date | null,
+    public readonly startedAt: Date,
+    public readonly endedAt: Date,
     public readonly date: Date,
     public readonly deletedAt: Date | null,
     public readonly scheduleCategoryId: number,
