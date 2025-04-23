@@ -12,7 +12,8 @@ export class CreateUserUseCase {
     departmentId?: number,
     positionId?: number,
     roleId: string = "02", // 기본값을 "02"로 설정
-    businessNumber: string="" // 사업자 번호 추가
+    businessNumber: string="", // 사업자 번호 추가
+    isApproved: boolean = true
   ): Promise<User> {
     const existingUser = await this.userRepository.findByUsername(username);
     if (existingUser) {
@@ -31,7 +32,7 @@ export class CreateUserUseCase {
       password,
       false, // isLocked (잠금 상태: 기본값 false)
       new Date(), // createdAt (생성일: 현재 시간)
-      false, // isApproved (승인 상태: 기본값 false, 회사 관리자의 승인 필요)
+      isApproved, // isApproved (승인 상태: 기본값 false, 회사 관리자의 승인 필요)
       true, // notificationOn (알림 상태: 기본값 true)
       roleId, // 역할 ID (기본값 "02")
       businessNumber, // 사업자 번호 설정

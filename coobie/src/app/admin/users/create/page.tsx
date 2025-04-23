@@ -228,6 +228,7 @@ export default function CreateUserPage() {
             : undefined,
           roleId: "02", // 사원 역할 ID 고정
           businessNumber: currentUser.businessNumber,
+          isApproved: true, // 관리자가 생성하는 계정은 자동 승인
         }),
       });
 
