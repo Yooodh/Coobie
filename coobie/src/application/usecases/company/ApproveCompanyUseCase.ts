@@ -1,4 +1,4 @@
-// /src/application/usecases/company/ApproveCompanyUseCase.ts
+// src/application/usecases/company/ApproveCompanyUseCase.ts
 import { CompanyRepository } from "@/domain/repositories/CompanyRepository";
 
 export class ApproveCompanyUseCase {

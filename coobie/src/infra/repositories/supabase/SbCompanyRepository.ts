@@ -4,90 +4,18 @@ import { CompanyFilter } from "@/domain/repositories/filters/CompanyFilter";
 import { CompanyRepository } from "@/domain/repositories/CompanyRepository";
 import { createBrowserSupabaseClient } from "@/utils/supabase/client";
 
-
 export class SbCompanyRepository implements CompanyRepository {
-  // async count(filter?: CompanyFilter): Promise<number> {
-  //   const supabase = await createBrowserSupabaseClient();
-
-  //   let query = supabase
-  //     .from("company")
-  //     .select("*", { count: "exact", head: true });
-
-  //   if (filter) {
-  //     if (filter.companyName) {
-  //       query = query.ilike("company_name", `%${filter.companyName}%`);
-  //     }
-  //     if (filter.businessNumber) {
-  //       query = query.eq("business_number", filter.businessNumber);
-  //     }
-  //     if (filter.isLocked !== undefined) {
-  //       query = query.eq("is_locked", filter.isLocked);
-  //     }
-  //     if (filter.isApproved !== undefined) {
-  //       query = query.eq("user.is_approved", filter.isApproved);
-  //     }
-  //   }
-
-  //   const { count, error } = await query;
-
-  //   if (error) {
-  //     throw new Error(`Failed to count companies: ${error.message}`);
-  //   }
-
-  //   return count || 0;
-  // }
-
-  // async findAll(filter?: CompanyFilter): Promise<Company[]> {
-  //   const supabase = await createBrowserSupabaseClient();
-
-  //   let query = supabase.from("company").select("*").is("deleted_at", null);
-
-  //   if (filter) {
-  //     if (filter.companyName) {
-  //       query = query.ilike("company_name", `%${filter.companyName}%`);
-  //     }
-  //     if (filter.businessNumber) {
-  //       query = query.eq("business_number", filter.businessNumber);
-  //     }
-  //     if (filter.isLocked !== undefined) {
-  //       query = query.eq("is_locked", filter.isLocked);
-  //     }
-  //     if (filter.isApproved !== undefined) {
-  //       query = query.eq("is_approved", filter.isApproved);
-  //     }
-
-  //     const offset = filter.offset ?? 0;
-  //     const limit = filter.limit ?? 10;
-  //     query = query.range(offset, offset + limit - 1);
-  //   }
-
-  //   const { data, error } = await query;
-
-  //   if (error) {
-  //     throw new Error(`Failed to fetch companies: ${error.message}`);
-  //   }
-
-  //   return data.map((company) => {
-  //     return {
-  //       id: company.ID,
-  //       companyName: company.company_name,
-  //       businessNumber: company.business_number,
-  //       isLocked: company.is_locked,
-  //       deletedAt: company.deleted_at ? new Date(company.deleted_at) : null,
-  //     } as unknown as Company;
-  //   });
-  // }
   async count(filter?: CompanyFilter): Promise<number> {
-    // 가장 간단한 해결책은 findAll을 호출하고 결과의 길이를 반환하는 것입니다
     const companies = await this.findAll(filter);
     return companies.length;
   }
+
   async findAll(filter?: CompanyFilter): Promise<Company[]> {
     const supabase = await createBrowserSupabaseClient();
-  
+
     // 먼저 회사 데이터 가져오기 (조인 없이)
     let query = supabase.from("company").select("*").is("deleted_at", null);
-  
+
     if (filter) {
       if (filter.companyName) {
         query = query.ilike("company_name", `%${filter.companyName}%`);
@@ -99,62 +27,69 @@ export class SbCompanyRepository implements CompanyRepository {
         query = query.eq("is_locked", filter.isLocked);
       }
     }
-  
+
     const { data: companies, error: companyError } = await query;
-  
+
     if (companyError) {
       throw new Error(`Failed to fetch companies: ${companyError.message}`);
     }
-  
+
     if (!companies || companies.length === 0) {
       return [];
     }
-  
+
     // 회사 ID와 관련된 사용자 데이터 가져오기
-    const userIds = companies.map(company => company.user_id).filter(Boolean);
-    
+    const userIds = companies.map((company) => company.user_id).filter(Boolean);
+
     if (userIds.length === 0) {
       return [];
     }
-  
+
     const { data: users, error: userError } = await supabase
       .from("user")
       .select("*")
       .in("ID", userIds);
-  
+
     if (userError) {
       throw new Error(`Failed to fetch user data: ${userError.message}`);
     }
-  
+
     // 회사 데이터와 사용자 데이터 병합
-    const result = companies.map(company => {
-      const user = users.find(u => u.ID === company.user_id) || {};
-      
-      // 필터링 조건 적용
-      if (filter?.isApproved !== undefined && user.is_approved !== filter.isApproved) {
-        return null;
-      }
-      
-      return {
-        id: company.ID,
-        companyName: company.company_name,
-        businessNumber: user.business_number || "",
-        isLocked: company.is_locked,
-        isApproved: user.is_approved || false,
-        createdAt: user.created_at,
-        userId: company.user_id,
-        roleId: company.role_id,
-        deletedAt: company.deleted_at ? new Date(company.deleted_at) : undefined,
-      };
-    }).filter(Boolean) as Company[];
-  
+    const result = companies
+      .map((company) => {
+        const user = users.find((u) => u.ID === company.user_id) || {};
+
+        // 필터링 조건 적용
+        if (
+          filter?.isApproved !== undefined &&
+          user.is_approved !== filter.isApproved
+        ) {
+          return null;
+        }
+
+        return {
+          id: company.ID,
+          companyName: company.company_name,
+          businessNumber: user.business_number || "",
+          isLocked: company.is_locked,
+          isApproved: user.is_approved || false,
+          createdAt: user.created_at,
+          userId: company.user_id,
+          roleId: company.role_id,
+          deletedAt: company.deleted_at
+            ? new Date(company.deleted_at)
+            : undefined,
+        };
+      })
+      .filter(Boolean) as Company[];
+
     // 페이지네이션 처리
     if (filter?.offset !== undefined && filter?.limit !== undefined) {
       const start = filter.offset;
       const end = start + filter.limit;
       return result.slice(start, end);
     }
-  
+
     return result;
   }
 
@@ -190,22 +125,44 @@ export class SbCompanyRepository implements CompanyRepository {
     } as unknown as Company;
   }
 
+
   async findByBusinessNumber(businessNumber: string): Promise<Company | null> {
     const supabase = await createBrowserSupabaseClient();
 
+    // 먼저 사업자번호로 사용자(관리자) 조회
+    const { data: userData, error: userError } = await supabase
+      .from("user")
+      .select("ID, role_id")
+      .eq("business_number", businessNumber)
+      .eq("role_id", "01") // 회사 관리자
+      .maybeSingle();
+
+    if (userError) {
+      if (userError.code === "PGRST116") {
+        return null; // 데이터가 없을 경우 null 반환
+      }
+      throw new Error(
+        `사업자번호 ${businessNumber}로 사용자 조회 중 오류 발생: ${userError.message}`
+      );
+    }
+
+    if (!userData) {
+      return null; // 해당 사업자번호를 가진 관리자가 없으면 null 반환
+    }
+
+    // 관리자 ID로 회사 정보 조회
     const { data, error } = await supabase
       .from("company")
       .select("*")
-      .eq("business_number", businessNumber)
-      .single();
+      .eq("user_id", userData.ID)
+      .maybeSingle();
 
     if (error) {
-      // If no data is found, return null without throwing an error
       if (error.code === "PGRST116") {
         return null;
       }
       throw new Error(
-        `Failed to fetch company with business number ${businessNumber}: ${error.message}`
+        `관리자 ID ${userData.ID}로 회사 조회 중 오류 발생: ${error.message}`
       );
     }
 
@@ -213,49 +170,81 @@ export class SbCompanyRepository implements CompanyRepository {
       return null;
     }
 
+    // 회사 엔티티로 변환하여 반환
     return {
       id: data.ID,
       companyName: data.company_name,
-      businessNumber: data.business_number,
       isLocked: data.is_locked,
-      deletedAt: data.deleted_at ? new Date(data.deleted_at) : null,
-    } as unknown as Company;
+      userId: data.user_id,
+      roleId: userData.role_id,
+      deletedAt: data.deleted_at ? new Date(data.deleted_at) : undefined,
+    } as Company;
   }
 
   async save(company: Company): Promise<Company> {
     const supabase = await createBrowserSupabaseClient();
-
-    // 저장할 데이터 객체 생성
+  
+    // ID 필드를 명시적으로 제외하고 데이터 객체 생성
     const companyData: any = {
       company_name: company.companyName,
-      business_number: company.businessNumber,
       is_locked: company.isLocked,
+      user_id: company.userId,
+      role_id: company.roleId
     };
-
-    // ID가 제공된 경우에만 ID 필드 포함
-    if (company.Id && company.Id.trim() !== "") {
-      companyData.ID = company.Id;
-    }
-
+  
     const { data, error } = await supabase
       .from("company")
       .insert(companyData)
       .select()
       .single();
-
+  
     if (error) {
       throw new Error(`Failed to save company: ${error.message}`);
     }
-
+  
     return {
       id: data.ID,
       companyName: data.company_name,
-      businessNumber: data.business_number,
       isLocked: data.is_locked,
-      deletedAt: data.deleted_at ? new Date(data.deleted_at) : null,
-    } as unknown as Company;
+      userId: data.user_id,
+      roleId: data.role_id,
+      deletedAt: data.deleted_at ? new Date(data.deleted_at) : undefined
+    } as Company;
   }
 
+  // async update(company: Company): Promise<Company> {
+  //   const supabase = await createBrowserSupabaseClient();
+
+  //   const updates: any = {};
+
+  //   if (company.companyName !== undefined)
+  //     updates.company_name = company.companyName;
+  //   if (company.businessNumber !== undefined)
+  //     updates.business_number = company.businessNumber;
+  //   if (company.isLocked !== undefined) updates.is_locked = company.isLocked;
+
+  //   const { data, error } = await supabase
+  //     .from("company")
+  //     .update(updates)
+  //     .eq("ID", company.Id)
+  //     .select()
+  //     .single();
+
+  //   if (error) {
+  //     throw new Error(
+  //       `Failed to update company with id ${company.Id}: ${error.message}`
+  //     );
+  //   }
+
+  //   return {
+  //     id: data.ID,
+  //     companyName: data.company_name,
+  //     businessNumber: data.business_number,
+  //     isLocked: data.is_locked,
+  //     deletedAt: data.deleted_at ? new Date(data.deleted_at) : null,
+  //   } as unknown as Company;
+  // }
+  // SbCompanyRepository의 update 메서드 수정
   async update(company: Company): Promise<Company> {
     const supabase = await createBrowserSupabaseClient();
 
@@ -263,30 +252,31 @@ export class SbCompanyRepository implements CompanyRepository {
 
     if (company.companyName !== undefined)
       updates.company_name = company.companyName;
-    if (company.businessNumber !== undefined)
-      updates.business_number = company.businessNumber;
     if (company.isLocked !== undefined) updates.is_locked = company.isLocked;
+    if (company.userId !== undefined) updates.user_id = company.userId;
+    if (company.roleId !== undefined) updates.role_id = company.roleId;
 
     const { data, error } = await supabase
       .from("company")
       .update(updates)
-      .eq("ID", company.Id)
+      .eq("ID", company.id)
       .select()
       .single();
 
     if (error) {
       throw new Error(
-        `Failed to update company with id ${company.Id}: ${error.message}`
+        `Failed to update company with id ${company.id}: ${error.message}`
       );
     }
 
     return {
       id: data.ID,
       companyName: data.company_name,
-      businessNumber: data.business_number,
       isLocked: data.is_locked,
-      deletedAt: data.deleted_at ? new Date(data.deleted_at) : null,
-    } as unknown as Company;
+      userId: data.user_id,
+      roleId: data.role_id,
+      deletedAt: data.deleted_at ? new Date(data.deleted_at) : undefined,
+    } as Company;
   }
 
   async delete(id: string): Promise<void> {
@@ -320,17 +310,49 @@ export class SbCompanyRepository implements CompanyRepository {
     }
   }
 
+  // async updateApprovalStatus(id: string, isApproved: boolean): Promise<void> {
+  //   const supabase = await createBrowserSupabaseClient();
+
+  //   const { error } = await supabase
+  //     .from("company")
+  //     .update({ is_approved: isApproved })
+  //     .eq("ID", id);
+
+  //   if (error) {
+  //     throw new Error(
+  //       `Failed to update approval status for company with id ${id}: ${error.message}`
+  //     );
+  //   }
+  // }
   async updateApprovalStatus(id: string, isApproved: boolean): Promise<void> {
     const supabase = await createBrowserSupabaseClient();
-
-    const { error } = await supabase
+  
+    // 1. 회사 정보를 가져옵니다
+    const { data: companyData, error: companyError } = await supabase
       .from("company")
-      .update({ is_approved: isApproved })
-      .eq("ID", id);
-
-    if (error) {
+      .select("user_id")
+      .eq("ID", id)
+      .single();
+  
+    if (companyError) {
       throw new Error(
-        `Failed to update approval status for company with id ${id}: ${error.message}`
+        `회사 정보를 가져오는 중 오류 발생 (ID: ${id}): ${companyError.message}`
+      );
+    }
+  
+    if (!companyData || !companyData.user_id) {
+      throw new Error(`회사 관리자 정보를 찾을 수 없습니다 (회사 ID: ${id})`);
+    }
+  
+    // 2. 관리자 계정의 승인 상태를 업데이트합니다
+    const { error: updateError } = await supabase
+      .from("user")
+      .update({ is_approved: isApproved })
+      .eq("ID", companyData.user_id);
+  
+    if (updateError) {
+      throw new Error(
+        `회사 관리자 승인 상태 업데이트 중 오류 발생 (사용자 ID: ${companyData.user_id}): ${updateError.message}`
       );
     }
   }
