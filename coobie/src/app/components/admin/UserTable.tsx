@@ -11,6 +11,7 @@ interface UserTableProps {
   onResetPassword: (userId: string) => void;
   onToggleLock: (userId: string, currentStatus: boolean) => void;
   onDeleteUser: (userId: string) => void;
+  onEditUser: (user: User) => void;
 }
 
 export default function UserTable({ 
@@ -19,7 +20,8 @@ export default function UserTable({
   positions, 
   onResetPassword, 
   onToggleLock, 
-  onDeleteUser 
+  onDeleteUser,
+  onEditUser
 }: UserTableProps) {
   
   const formatDate = (date: Date | undefined | string) => {
@@ -75,7 +77,7 @@ export default function UserTable({
             <th className="py-3 px-4 text-center">부서</th>
             <th className="py-3 px-4 text-center">직급</th>
             <th className="py-3 px-4 text-center">생성일</th>
-            <th className="py-3 px-4 text-center text-red-500">삭제</th>
+            <th className="py-3 px-4 text-center">작업</th>
           </tr>
         </thead>
         <tbody>
@@ -87,8 +89,12 @@ export default function UserTable({
             </tr>
           ) : (
             users.map((user) => (
-              <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-50">
-                <td className="py-4 px-4 text-center">
+              <tr 
+                key={user.id} 
+                className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer"
+                onClick={() => onEditUser(user)}
+              >
+                <td className="py-4 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                   <div className="flex justify-center">
                     <button
                       onClick={() => onToggleLock(user.id, user.isLocked)}
@@ -112,13 +118,22 @@ export default function UserTable({
                 <td className="py-4 px-4 text-center">{getDepartmentName(user.departmentId)}</td>
                 <td className="py-4 px-4 text-center">{getPositionName(user.positionId)}</td>
                 <td className="py-4 px-4 text-center">{formatDate(user.createdAt)}</td>
-                <td className="py-4 px-4 text-center">
-                  <button
-                    onClick={() => onDeleteUser(user.id)}
-                    className="text-red-500 hover:text-red-700 font-medium"
-                  >
-                    삭제
-                  </button>
+                <td className="py-4 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex justify-center space-x-2">
+                    <button
+                      onClick={() => onResetPassword(user.id)}
+                      className="text-blue-500 hover:text-blue-700 font-medium"
+                      title="비밀번호 초기화"
+                    >
+                      초기화
+                    </button>
+                    <button
+                      onClick={() => onDeleteUser(user.id)}
+                      className="text-red-500 hover:text-red-700 font-medium"
+                    >
+                      삭제
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))

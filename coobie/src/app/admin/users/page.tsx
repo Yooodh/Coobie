@@ -1,4 +1,4 @@
-// src/app/admin/users/page.tsx
+// src/app/admin/users/page.tsx (수정)
 "use client";
 
 import { useState, useEffect } from "react";
@@ -7,7 +7,10 @@ import { Department } from "@/domain/entities/Department";
 import { Position } from "@/domain/entities/Position";
 import SearchTabs from "@/app/components/admin/SearchTabs";
 import UserTable from "@/app/components/admin/UserTable";
+import UserModal from "@/app/components/admin/UserModal"; // 추가
 import { LogoutUseCase } from "@/application/usecases/auth/LogoutUseCase";
+import { SbUserRepository } from "@/infra/repositories/supabase/SbUserRepository"; // 추가
+import { UpdateUserUseCase } from "@/application/usecases/user/UpdateUserUseCase"; // 추가
 
 export default function UserManagementPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -20,7 +23,11 @@ export default function UserManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchType, setSearchType] = useState("전체");
   const [loggingOut, setLoggingOut] = useState(false);
-  const [currentUser, setCurrentUser] = useState<unknown>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  
+  // 모달 관련 상태 추가
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // 현재 로그인한 사용자 정보 가져오기
   useEffect(() => {
@@ -170,39 +177,6 @@ export default function UserManagementPage() {
     }
   };
 
-  // useEffect(() => {
-  //   const checkUserInfo = async () => {
-  //     try {
-  //       const response = await fetch("/api/auth/me");
-  //       const userData = await response.json();
-  //       console.log("사용자 정보:", userData);
-  //       console.log("Business Number:", userData.user.businessNumber);
-  //     } catch (err) {
-  //       console.error("사용자 정보 확인 중 오류:", err);
-  //     }
-  //   };
-
-  //   checkUserInfo();
-  // }, []);
-
-  // // 현재 사용자 정보가 변경될 때 사용자 목록 다시 가져오기
-  // useEffect(() => {
-  //   if (currentUser && currentUser.businessNumber) {
-  //     fetchDepartmentsAndPositions();
-  //     fetchUsers();
-  //   }
-  // }, [currentUser, currentPage, searchTerm, searchType]);
-
-  // // useEffect(() => {
-  // //   fetchDepartmentsAndPositions();
-  // // }, []);
-
-  // // useEffect(() => {
-  // //   fetchUsers();
-  // // }, [currentPage, searchTerm, searchType]);
-
-  
-
   const handleSearch = (term: string, type: string) => {
     setSearchTerm(term);
     setSearchType(type);
@@ -282,6 +256,54 @@ export default function UserManagementPage() {
     }
   };
 
+  // 모달 관련 함수 추가
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedUser(null);
+    setIsModalOpen(false);
+  };
+
+  const handleSaveUser = async (updatedUser: Partial<User>) => {
+    if (!selectedUser) return;
+
+    try {
+      const userRepository = new SbUserRepository();
+      const updateUserUseCase = new UpdateUserUseCase(userRepository);
+      
+      // useCase를 직접 호출하는 방법 대신 API 호출 방식으로 변경
+      const response = await fetch(`/api/users/${selectedUser.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...updatedUser,
+          // 숫자 타입 처리
+          departmentId: updatedUser.departmentId !== undefined 
+            ? Number(updatedUser.departmentId) 
+            : undefined,
+          positionId: updatedUser.positionId !== undefined 
+            ? Number(updatedUser.positionId) 
+            : undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `오류: ${response.status}`);
+      }
+
+      alert("사용자 정보가 성공적으로 업데이트되었습니다");
+      fetchUsers(); // 목록 새로고침
+    } catch (err: any) {
+      throw new Error(err.message || "사용자 정보 업데이트에 실패했습니다");
+    }
+  };
+
   const handleLogout = async () => {
     if (confirm("정말 로그아웃 하시겠습니까?")) {
       try {
@@ -343,6 +365,7 @@ export default function UserManagementPage() {
               onResetPassword={resetPassword}
               onToggleLock={toggleLockStatus}
               onDeleteUser={deleteUser}
+              onEditUser={handleEditUser}
             />
 
             {/* 페이지네이션 */}
@@ -396,6 +419,16 @@ export default function UserManagementPage() {
           </>
         )}
       </div>
+
+      {/* 사용자 정보 수정 모달 */}
+      <UserModal
+        user={selectedUser}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onSave={handleSaveUser}
+        departments={departments}
+        positions={positions}
+      />
     </div>
   );
 }
