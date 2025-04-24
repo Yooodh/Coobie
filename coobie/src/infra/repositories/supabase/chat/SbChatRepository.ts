@@ -3,49 +3,37 @@ import { ChatRoomRepository } from "@/domain/repositories/chat/ChatRoomRepositor
 import { createClient } from "@/utils/supabase/server";
 
 export class SbChatRoomRepository implements ChatRoomRepository {
-  async createRoom(chatRoom: ChatRoom, receiverId: string): Promise<ChatRoom> {
+  async createRoom(chatRoom: ChatRoom): Promise<ChatRoom> {
     const supabase = await createClient();
 
-    if (!receiverId) {
-      throw new Error(
-        "receiverId is null or undefined. Cannot insert into chat_room_members."
-      );
+    const { data: existingMember, error: fetchError } = await supabase
+      .from("chat_rooms")
+      .select("*")
+      .eq("user_id", chatRoom.userId)
+      .eq("name", chatRoom.name)
+      .maybeSingle(); // Use maybeSingle to handle no rows found gracefully
+
+    if (fetchError) {
+      throw new Error(fetchError.message);
     }
 
-    console.log("Receiver ID:", receiverId); // Debugging log
-
+    // if (existingMember) {
+    //   throw new Error("Member already exists in the chat room.");
+    // }
     // Insert into chat_rooms table
     const { data: chatRoomData, error: chatRoomError } = await supabase
       .from("chat_rooms")
       .insert({
+        user_id: chatRoom.userId,
         is_group: chatRoom.isGroup,
         name: chatRoom.name,
         created_at: chatRoom.createdAt,
       })
       .select()
-      .single();
-
-    if (chatRoomError) {
-      throw new Error(chatRoomError.message);
-    }
-
-    // Insert into chat_room_members table using the generated chat_room_id and receiver.id
-    const { error: chatRoomMemberError } = await supabase
-      .from("chat_room_members")
-      .insert({
-        chat_room_id: chatRoomData.id, // Use the generated ID from chat_rooms
-        user_id: receiverId, // Use receiver.id as user_id
-      });
-
-    if (chatRoomMemberError) {
-      throw new Error(chatRoomMemberError.message);
-    }
+      .maybeSingle(); // Use maybeSingle to handle cases where no rows are found gracefully
 
     return {
       ...chatRoomData,
-      name: chatRoomData.name,
-      isGroup: chatRoomData.isGroup,
-      createdAt: chatRoomData.createdAt,
     } as ChatRoom;
   }
 }
