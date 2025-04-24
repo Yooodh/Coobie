@@ -92,13 +92,11 @@ export async function GET(request: NextRequest) {
       roleId,
       isLocked,
       isApproved,
-      businessNumber // 이 값이 올바르게 전달되는지 확인
+      businessNumber, // 이 값이 올바르게 전달되는지 확인
     });
-    
+
     // 필터 객체 생성 후
     console.log("생성된 필터:", filter);
-
-
 
     // 저장소 및 유스케이스 초기화
     const userRepository = new SbUserRepository();
