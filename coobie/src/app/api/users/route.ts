@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SbUserRepository } from "@/infra/repositories/supabase/SbUserRepository";
 import { CreateUserUseCase } from "@/application/usecases/user/CreateUserUsecase";
-import { GetUserUseCase } from "@/application/usecases/user/GetUserUsecase";
+import { GetUserUseCase } from "@/application/usecases/user/GetUserUseCase";
 import { UserFilter } from "@/domain/repositories/filters/UserFilter";
 
 // 오류 타입 정의
