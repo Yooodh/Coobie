@@ -1,8 +1,9 @@
 export class ChatRoomDto {
   constructor(
-    public isGroup: boolean = false,
+    public userId: string,
     public name: string,
-    public createdAt: string,
+    public isGroup: boolean = false,
+    public createdAt?: string,
     public id?: string
   ) {}
 }
