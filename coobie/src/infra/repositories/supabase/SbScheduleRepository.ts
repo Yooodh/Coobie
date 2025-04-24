@@ -244,4 +244,41 @@ export class SbScheduleRepository implements ScheduleRepository {
       );
     }
   }
+
+  // 스케줄 수정
+  async updateSchedule(schedule: Schedule): Promise<Schedule> {
+    try {
+      const client = await createClient();
+
+      // 날짜 포맷 변환
+      const updateData = {
+        user_id: schedule.userId,
+        started_at: schedule.startedAt.toISOString(),
+        ended_at: schedule.endedAt.toISOString(),
+        date: schedule.date.toISOString(),
+        deleted_at: schedule.deletedAt?.toISOString() ?? null,
+        schedulecategory_id: schedule.scheduleCategoryId,
+        category: schedule.category,
+      };
+
+      const { data, error } = await client
+        .from(SbScheduleRepository.SCHEDULE_TABLE)
+        .update(updateData)
+        .eq("ID", schedule.id)
+        .select("*")
+        .single();
+
+      if (error || !data) {
+        throw new ScheduleRepositoryError(
+          `스케줄 업데이트 실패 (ID: ${schedule.id}): ${error?.message}`
+        );
+      }
+
+      return this.toSchedule(data);
+    } catch (err) {
+      throw new ScheduleRepositoryError(
+        `스케줄 업데이트 중 오류 발생: ${(err as Error).message}`
+      );
+    }
+  }
 }
