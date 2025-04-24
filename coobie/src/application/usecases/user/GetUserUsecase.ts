@@ -45,33 +45,4 @@ export class GetUserUseCase {
 
     return { users, total, totalPages };
   }
-
-  async getByBusinessNumber(
-    businessNumber: string,
-    filter?: UserFilter
-  ): Promise<{ users: User[]; total: number; totalPages: number }> {
-    const combinedFilter = { ...filter, businessNumber };
-
-    const users = await this.userRepository.findAll(combinedFilter);
-    const total = await this.userRepository.count(combinedFilter);
-    const limit = filter?.limit || 10;
-    const totalPages = Math.ceil(total / limit);
-
-    return { users, total, totalPages };
-  }
-
-  async getByBusinessNumberAndRoleId(
-    businessNumber: string,
-    roleId: string,
-    filter?: UserFilter
-  ): Promise<{ users: User[]; total: number; totalPages: number }> {
-    const combinedFilter = { ...filter, businessNumber, roleId };
-
-    const users = await this.userRepository.findAll(combinedFilter);
-    const total = await this.userRepository.count(combinedFilter);
-    const limit = filter?.limit || 10;
-    const totalPages = Math.ceil(total / limit);
-
-    return { users, total, totalPages };
-  }
 }
