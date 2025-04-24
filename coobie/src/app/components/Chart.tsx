@@ -127,7 +127,7 @@ const Chart: React.FC<ChartProps> = ({
       <div className="text-center p-2 border-b border-gray-200 text-lg font-medium text-gray-400">
         {formatDate(date)}
       </div>
-      <div ref={combineRefs} className="relative h-[600px]">
+      <div ref={combineRefs} className="relative h-[620px] overflow-y-auto">
         {timeLabels.map((hour, index) => (
           <div
             key={hour}
