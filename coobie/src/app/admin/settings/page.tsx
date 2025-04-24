@@ -193,7 +193,7 @@ export default function SettingsPage() {
               onClick={() => alert("준비 중인 기능입니다")}
               className="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-2 rounded"
             >
-              비밀번호 변경
+              비밀번호 재설정
             </button>
           </div>
         </>
