@@ -9,7 +9,8 @@ export class Schedule {
     public readonly date: Date,
     public deletedAt: Date | null,
     public readonly scheduleCategoryId: number,
-    public readonly category?: ScheduleCategory
+    public readonly category?: ScheduleCategory,
+    public color?: string
   ) {}
 
   isDeleted() {
@@ -19,4 +20,10 @@ export class Schedule {
   softDelete(date: Date = new Date()) {
     this.deletedAt = date;
   }
+}
+
+export interface DayColumn {
+  date: Date;
+  dayName: string;
+  formattedDate: string;
 }
