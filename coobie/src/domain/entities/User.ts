@@ -1,15 +1,17 @@
 export class User {
   constructor(
-    username: string,
-    password: string,
-    createdAt: Date,
-    isLocked: boolean,
-    isApproved: boolean,
-    nickName: string,
-    notificationOn: boolean,
-    departmentId: number,
-    positionId: number,
-    roleId: string,
-    deleted_at: Date
+    public id: string,
+    public username: string,
+    public nickname: string,
+    public password: string,
+    public isLocked: boolean = false,
+    public createdAt: Date,
+    public isApproved: boolean = false,
+    public notificationOn: boolean = true,
+    public roleId: string,
+    public businessNumber: string,
+    public deletedAt?: Date,
+    public departmentId?: number,
+    public positionId?: number
   ) {}
 }
