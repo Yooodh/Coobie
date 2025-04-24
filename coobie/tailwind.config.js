@@ -12,6 +12,12 @@ module.exports = {
           "100%": { opacity: 1, transform: "translateY(0)" },
         },
       },
+      colors: {
+        amber: {
+          800: "#92400e",
+          900: "#78350f",
+        },
+      },
     },
   },
 };
