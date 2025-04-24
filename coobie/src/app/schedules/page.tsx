@@ -1,104 +1,213 @@
-// 클라이언트 컴포넌트임을 명시 (Next.js에서 클라이언트 측 렌더링용)
 "use client";
+import React, { useState } from "react";
+import ProfileContainer from "@/app/components/ProfileContainer";
+import ChartContainer from "@/app/components/ChartContainer";
+import DraggableBlock from "@/app/components/DraggableBlock";
+import { BlockType, ProfileType } from "@/types/ScheduleType";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-import React, { useEffect, useState } from "react";
-import { DndProvider } from "react-dnd"; // 드래그 앤 드롭 컨텍스트 제공
-import { HTML5Backend } from "react-dnd-html5-backend"; // 브라우저 환경에 맞는 백엔드 사용
-import DataBlock, { Schedule } from "../components/DataBlock"; // 드래그 가능한 스케줄 블록 컴포넌트
-import DataChart from "../components/DataChart"; // 드롭 대상인 차트 컴포넌트
+export default function Home() {
+  // 차트의 시작 시간(오전 9시)
+  const [startHour] = useState(9);
+  // 모든 일정 블록 상태 관리
+  const [blocks, setBlocks] = useState<BlockType[]>([]);
 
-export default function SchedulesPage() {
-  // 전체 스케줄 데이터 상태
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  // 사용자 프로필 정보 상태 관리
+  const [profile] = useState<ProfileType>({
+    name: "유대현",
+    title: "FE Developer",
+    company: "멋사",
+    avatar: "/placeholder-avatar.jpg",
+  });
 
-  // 차트에 표시될 스케줄 데이터 상태
-  const [chartData, setChartData] = useState<Schedule[]>([]);
+  // 일정 블록이 겹치는지 검사하는 함수
+  function isOverlapping(
+    blocks: BlockType[],
+    day: number,
+    startTime: number,
+    duration: number,
+    exceptBlockId?: string // (옵션) 검사에서 제외할 블록 id
+  ) {
+    const endTime = startTime + duration;
+    return blocks.some((block) => {
+      if (block.day !== day) return false; // 같은 요일만 검사
+      if (block.id === exceptBlockId) return false; // 자기 자신 제외
+      const blockEnd = block.startTime + block.duration;
+      // 시간이 겹치는지 검사
+      return startTime < blockEnd && endTime > block.startTime;
+    });
+  }
 
-  // 로딩 여부 상태
-  const [loading, setLoading] = useState(true);
+  // 새로운 일정 블록 추가 핸들러
+  const handleAddBlock = (
+    type: "휴가" | "외근" | "회의",
+    day: number,
+    startTime: number
+  ) => {
+    const duration = 1; // 기본 1시간
+    const endTime = startTime + duration;
 
-  // 컴포넌트 마운트 시 스케줄 데이터 fetch
-  useEffect(() => {
-    fetch("/api/schedules") // API 호출
-      .then((res) => res.json()) // JSON 파싱
-      .then((data) => {
-        setSchedules(data.data || []); // 데이터 상태 저장
-        setLoading(false); // 로딩 상태 해제
-      });
-  }, []);
-
-  // 스케줄을 차트에 추가하는 핸들러
-  const handleDropSchedule = (schedule: Schedule) => {
-    // 이미 chartData에 없는 경우만 추가
-    if (!chartData.find((s) => s.id === schedule.id)) {
-      setChartData((prev) => [...prev, schedule]);
+    // 허용 시간 범위(9~19시) 체크
+    if (startTime < startHour || endTime > 19) {
+      setTimeout(() => toast.error("허용된 시간 범위를 벗어났습니다!"), 0);
+      return;
     }
+
+    // 시간 겹침 체크
+    const isOverlap = blocks.some((block) => {
+      if (block.day !== day) return false;
+      const blockEnd = block.startTime + block.duration;
+      return startTime < blockEnd && endTime > block.startTime;
+    });
+
+    if (isOverlap) {
+      setTimeout(() => toast.error("시간이 겹치는 일정이 있습니다!"), 0);
+      return;
+    }
+
+    // 타입별 색상 지정
+    const colors = {
+      휴가: "#F7B299",
+      외근: "#7EDC92",
+      회의: "#7EC6F7",
+    };
+
+    // 새 블록 객체 생성
+    const newBlock: BlockType = {
+      id: `${Date.now()}-${Math.random()}`,
+      day,
+      startTime,
+      duration,
+      type,
+      color: colors[type],
+    };
+
+    // 블록 추가 및 성공 토스트
+    setBlocks((prev) => [...prev, newBlock]);
+    setTimeout(() => toast.success("일정이 추가되었습니다!"), 0);
   };
 
-  // 차트에서 스케줄을 제거하는 핸들러
-  const handleRemoveSchedule = (scheduleId: number) => {
-    // 해당 ID를 제외한 나머지를 chartData에 저장
-    setChartData((prev) => prev.filter((s) => s.id !== scheduleId));
+  // 블록 크기(기간) 조절 핸들러
+  const handleResizeBlock = (
+    id: string,
+    newDuration: number,
+    newStartTime?: number
+  ) => {
+    let overlap = false;
+    setBlocks((prevBlocks) =>
+      prevBlocks.map((block) => {
+        if (block.id !== id) return block;
+        const startTime = newStartTime ?? block.startTime;
+        const endTime = startTime + newDuration;
+
+        // 겹치는 블록이 있는지 검사
+        const isOverlap = prevBlocks.some((b) => {
+          if (b.id === id || b.day !== block.day) return false;
+          const bEnd = b.startTime + b.duration;
+          return startTime < bEnd && endTime > b.startTime;
+        });
+
+        if (isOverlap) {
+          overlap = true;
+          return block;
+        }
+        // 크기/시작시간 변경
+        return { ...block, duration: newDuration, startTime };
+      })
+    );
+
+    if (overlap) {
+      setTimeout(() => toast.error("시간이 겹치는 일정이 있습니다!"), 0);
+      return false;
+    }
+    return true;
   };
 
-  // 로딩 중일 경우 메시지 표시
-  if (loading) return <div>로딩 중...</div>;
+  // 블록 이동 핸들러 (다른 요일/시간으로 이동)
+  const handleMoveBlock = (
+    id: string,
+    newDay: number,
+    newStartTime: number
+  ) => {
+    let overlap = false;
+    setBlocks((prevBlocks) =>
+      prevBlocks.map((block) => {
+        if (block.id !== id) return block;
+        const endTime = newStartTime + block.duration;
 
-  // 차트에 이미 추가되지 않은 스케줄만 필터링해서 표시
-  const availableSchedules = schedules.filter(
-    (schedule) => !chartData.some((s) => s.id === schedule.id)
-  );
+        // 겹치는 블록이 있는지 검사
+        const isOverlap = prevBlocks.some((b) => {
+          if (b.id === id || b.day !== newDay) return false;
+          const bEnd = b.startTime + b.duration;
+          return newStartTime < bEnd && endTime > b.startTime;
+        });
 
+        if (isOverlap) {
+          overlap = true;
+          return block;
+        }
+        // 요일/시작시간 변경
+        return { ...block, day: newDay, startTime: newStartTime };
+      })
+    );
+    if (overlap) {
+      setTimeout(() => toast.error("시간이 겹치는 일정이 있습니다!"), 0);
+      return false;
+    }
+    return true;
+  };
+
+  // 블록 삭제 핸들러
+  const handleDeleteBlock = (id: string) => {
+    setBlocks((prevBlocks) => prevBlocks.filter((block) => block.id !== id));
+    setTimeout(() => toast.info("일정이 삭제되었습니다!"), 0);
+  };
+
+  // 일정 데이터 저장(로컬스토리지)
+  const handleSave = () => {
+    localStorage.setItem("blocks", JSON.stringify(blocks));
+    setTimeout(() => toast.success("일정이 저장되었습니다!"), 0);
+  };
+
+  // 컴포넌트 렌더링
   return (
-    // DnD 기능을 사용할 수 있도록 DndProvider로 전체 감싸기
-    <DndProvider backend={HTML5Backend}>
-      {/* 페이지 레이아웃 영역 */}
-      <div style={{ padding: 24, maxWidth: 1000, margin: "0 auto" }}>
-        {/* 페이지 제목 */}
-        <h1
-          style={{
-            textAlign: "center",
-            fontSize: "2.5rem",
-            fontWeight: "bold",
-            marginBottom: "2rem",
-          }}
-        >
-          스케줄 목록
-        </h1>
-
-        {/* 드래그 가능한 블록 안내 텍스트 */}
-        <h2
-          style={{
-            textAlign: "center",
-            fontSize: "1.5rem",
-            margin: "2rem 0 1rem",
-          }}
-        >
-          드래그 가능한 스케줄 블록
-        </h2>
-
-        {/* 드래그 가능한 스케줄 블록들 표시 */}
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 16,
-            justifyContent: "center",
-          }}
-        >
-          {availableSchedules.map((schedule) => (
-            // 각 스케줄을 드래그 가능한 DataBlock 컴포넌트로 렌더링
-            <DataBlock key={schedule.id} schedule={schedule} />
-          ))}
+    <main className="container mx-auto p-6 min-h-screen">
+      {/* 토스트 메시지 컨테이너 */}
+      <ToastContainer position="top-center" autoClose={2000} />
+      {/* 상단: 프로필 및 블록 팔레트 */}
+      <div className="flex justify-between items-start mb-8">
+        {/* 프로필 영역 */}
+        <div className="min-w-[320px]">
+          <ProfileContainer profile={profile} />
+        </div>
+        {/* 블록 팔레트(휴가/외근/회의) */}
+        <div className="flex flex-col items-end gap-6 flex-1">
+          <div className="flex space-x-6">
+            <DraggableBlock type="휴가" color="#F7B299" />
+            <DraggableBlock type="외근" color="#7EDC92" />
+            <DraggableBlock type="회의" color="#7EC6F7" />
+          </div>
         </div>
       </div>
 
-      {/* 차트 컴포넌트 - 드롭 대상 및 시각화 영역 */}
-      <DataChart
-        chartData={chartData} // 차트에 보여줄 스케줄 목록
-        onDropSchedule={handleDropSchedule} // 드래그 드롭 시 호출될 핸들러
-        onRemoveSchedule={handleRemoveSchedule} // 삭제 버튼 등으로 제거 시 호출될 핸들러
+      {/* 주간/월간 차트 컨테이너 */}
+      <ChartContainer
+        blocks={blocks}
+        onResizeBlock={handleResizeBlock}
+        onDeleteBlock={handleDeleteBlock}
+        startHour={startHour}
+        onAddBlock={handleAddBlock}
+        onMoveBlock={handleMoveBlock}
       />
-    </DndProvider>
+
+      {/* 저장 버튼 */}
+      <button
+        onClick={handleSave}
+        className="fixed bottom-8 right-8 bg-blue-500 hover:bg-blue-600 text-white text-lg font-bold px-8 py-2 rounded-lg shadow-lg transition-all z-50"
+      >
+        저장
+      </button>
+    </main>
   );
 }
