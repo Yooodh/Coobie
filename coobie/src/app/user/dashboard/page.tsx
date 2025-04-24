@@ -16,6 +16,7 @@ export default function UserDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 유저 정보 받아오기
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -31,14 +32,20 @@ export default function UserDashboard() {
         // 부서 및 직급 정보 가져오기
         const [departmentsResponse, positionsResponse] = await Promise.all([
           fetch("/api/departments"),
-          fetch("/api/positions")
+          fetch("/api/positions"),
         ]);
-        
-        const departments = departmentsResponse.ok ? await departmentsResponse.json() : [];
-        const positions = positionsResponse.ok ? await positionsResponse.json() : [];
+
+        const departments = departmentsResponse.ok
+          ? await departmentsResponse.json()
+          : [];
+        const positions = positionsResponse.ok
+          ? await positionsResponse.json()
+          : [];
 
         // 사용자 목록 가져오기 (같은 회사 소속의 일반 사용자들)
-        const usersResponse = await fetch(`/api/users?roleId=02&businessNumber=${currentUserData.user.businessNumber}`);
+        const usersResponse = await fetch(
+          `/api/users?roleId=02&businessNumber=${currentUserData.user.businessNumber}`
+        );
         if (!usersResponse.ok) {
           throw new Error("사용자 목록을 불러오는데 실패했습니다");
         }
@@ -65,7 +72,7 @@ export default function UserDashboard() {
           departmentId: user.departmentId,
           positionId: user.positionId,
           departmentName: getDepartmentName(user.departmentId),
-          positionName: getPositionName(user.positionId)
+          positionName: getPositionName(user.positionId),
         }));
 
         // 현재 사용자도 Dto로 변환
@@ -76,7 +83,7 @@ export default function UserDashboard() {
           departmentId: currentUserData.user.departmentId,
           positionId: currentUserData.user.positionId,
           departmentName: getDepartmentName(currentUserData.user.departmentId),
-          positionName: getPositionName(currentUserData.user.positionId)
+          positionName: getPositionName(currentUserData.user.positionId),
         };
 
         setCurrentUser(currentUserDto);
@@ -103,8 +110,8 @@ export default function UserDashboard() {
     const filtered = users.filter(
       (user) =>
         user.nickname.toLowerCase().includes(lowerSearchTerm) ||
-        (user.departmentName?.toLowerCase()?.includes(lowerSearchTerm)) ||
-        (user.positionName?.toLowerCase()?.includes(lowerSearchTerm))
+        user.departmentName?.toLowerCase()?.includes(lowerSearchTerm) ||
+        user.positionName?.toLowerCase()?.includes(lowerSearchTerm)
     );
     setFilteredUsers(filtered);
   }, [searchTerm, users]);
@@ -181,9 +188,7 @@ export default function UserDashboard() {
               검색 결과가 없습니다
             </div>
           ) : (
-            filteredUsers.map((user) => (
-              <UserCard key={user.id} user={user} />
-            ))
+            filteredUsers.map((user) => <UserCard key={user.id} user={user} />)
           )}
         </div>
       </main>
