@@ -12,7 +12,7 @@ interface BlockProps {
     newStartTime?: number
   ) => boolean | void; // 블록 크기 조절 시 호출되는 함수
   onDelete: (id: string) => void; // 블록 삭제 시 호출되는 함수
-  onMove?: (id: string, day: number, startTime: number) => void; // 블록 이동 시 호출되는 함수
+  onMove?: (id: string, date: string, startTime: number) => void; // 블록 이동 시 호출되는 함수
 }
 
 export default function Block({
@@ -35,11 +35,10 @@ export default function Block({
 
   // React DnD 드래그 설정 - 블록을 드래그 가능하게 함
   const [{ isDragging }, drag] = useDrag(() => ({
-    type: "block-instance", // 드래그 타입 지정
+    type: "block-instance",
     item: {
-      // 드래그 시 전달할 데이터
       id: block.id,
-      day: block.day,
+      date: block.date, // ✅ 문자열 타입 유지
       startTime: block.startTime,
       duration: block.duration,
     },
