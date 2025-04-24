@@ -15,4 +15,5 @@ export interface ScheduleRepository {
   ): Promise<ScheduleCategory[]>;
   createSchedule(schedule: Schedule): Promise<Schedule>;
   deleteSchedule(userId: string, scheduleId: number): Promise<Schedule>;
+  updateSchedule(schedule: Schedule): Promise<Schedule>;
 }
