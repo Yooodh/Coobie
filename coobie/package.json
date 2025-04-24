@@ -16,8 +16,14 @@
     "jose": "^6.0.10",
     "jsonwebtoken": "^9.0.2",
     "next": "15.3.0",
+    "re-resizable": "^6.11.2",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dnd": "^16.0.1",
+    "react-dnd-html5-backend": "^16.0.1",
+    "react-dom": "^19.0.0",
+    "react-rnd": "^10.5.2",
+    "react-toastify": "^11.0.5",
+    "swiper": "^11.2.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
