@@ -3,7 +3,6 @@ import { SbPositionRepository } from "@/infra/repositories/supabase/SbPositionRe
 import { cookies } from "next/headers"; // 쿠키 가져오기
 import { verify } from "jsonwebtoken"; // JWT 검증
 
-
 // 오류 타입 정의
 interface ErrorWithMessage {
   message: string;
@@ -11,16 +10,16 @@ interface ErrorWithMessage {
 
 function isErrorWithMessage(error: unknown): error is ErrorWithMessage {
   return (
-    typeof error === 'object' &&
+    typeof error === "object" &&
     error !== null &&
-    'message' in error &&
-    typeof (error as Record<string, unknown>).message === 'string'
+    "message" in error &&
+    typeof (error as Record<string, unknown>).message === "string"
   );
 }
 
 function toErrorWithMessage(maybeError: unknown): ErrorWithMessage {
   if (isErrorWithMessage(maybeError)) return maybeError;
-  
+
   try {
     return new Error(JSON.stringify(maybeError));
   } catch {
@@ -51,8 +50,8 @@ function getTokenData(token: string) {
 export async function GET(request: NextRequest) {
   try {
     // 쿠키에서 토큰 가져오기
-    const token = cookies().get("auth_token")?.value;
-    
+    const token = (await cookies()).get("auth_token")?.value;
+
     if (!token) {
       return NextResponse.json(
         { error: "인증되지 않은 요청입니다" },
@@ -70,7 +69,7 @@ export async function GET(request: NextRequest) {
     }
 
     console.log("토큰에서 추출한 사용자 정보:", tokenData);
-    
+
     // 사용자의 businessNumber 가져오기
     const businessNumber = tokenData.businessNumber;
 
@@ -85,33 +84,30 @@ export async function GET(request: NextRequest) {
 
     // 직급 저장소 초기화
     const positionRepository = new SbPositionRepository();
-    
+
     // 해당 회사의 직급 가져오기 (businessNumber 사용)
     const positions = await positionRepository.getAllByCompany(businessNumber);
-    
+
     // 응답 데이터 형식 변환
-    const formattedPositions = positions.map(pos => ({
+    const formattedPositions = positions.map((pos) => ({
       id: pos.id,
       positionName: pos.positionName,
       createdAt: pos.createdAt,
-      companyId: pos.company_id
+      companyId: pos.company_id,
     }));
-    
+
     return NextResponse.json(formattedPositions);
   } catch (error: unknown) {
     console.error("직급 목록 조회 중 오류 발생:", error);
-    
-    const errorMessage = error instanceof Error 
-      ? error.message 
-      : "직급 목록을 불러오는데 실패했습니다";
-    
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "직급 목록을 불러오는데 실패했습니다";
+
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
-
 
 // POST 핸들러 (직급 생성)
 export async function POST(request: NextRequest) {
@@ -123,14 +119,14 @@ export async function POST(request: NextRequest) {
         headers: request.headers,
       }
     );
-    
+
     if (!currentUserResponse.ok) {
       return NextResponse.json(
         { error: "인증되지 않은 사용자입니다" },
         { status: 401 }
       );
     }
-    
+
     const userData = await currentUserResponse.json();
     const companyId = userData.user.businessNumber;
 
@@ -140,46 +136,46 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     // 요청 본문 파싱
     const body = await request.json();
     const { positionName } = body;
-    
+
     if (!positionName || typeof positionName !== "string") {
       return NextResponse.json(
         { error: "직급명은 필수 입력 항목입니다" },
         { status: 400 }
       );
     }
-    
+
     // 직급 저장소 초기화
     const positionRepository = new SbPositionRepository();
-    
+
     // 직급 생성
-    const newPosition = await positionRepository.create(companyId, positionName);
-    
+    const newPosition = await positionRepository.create(
+      companyId,
+      positionName
+    );
+
     // 응답 데이터 형식 변환
     const formattedPosition = {
       id: newPosition.id,
       positionName: newPosition.positionName,
       createdAt: newPosition.createdAt,
-      companyId: newPosition.company_id
+      companyId: newPosition.company_id,
     };
-    
+
     return NextResponse.json(formattedPosition, { status: 201 });
   } catch (error: unknown) {
     console.error("직급 생성 중 오류 발생:", error);
-    
+
     const errorMessage = getErrorMessage(error);
-    
+
     // 중복 오류 처리
     if (errorMessage.includes("이미 존재하는 직급명")) {
-      return NextResponse.json(
-        { error: errorMessage },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: errorMessage }, { status: 409 });
     }
-    
+
     return NextResponse.json(
       { error: errorMessage || "직급 생성에 실패했습니다" },
       { status: 500 }
