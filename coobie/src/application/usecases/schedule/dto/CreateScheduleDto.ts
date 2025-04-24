@@ -1,4 +1,3 @@
-// application/usecases/schedule/dto/CreateScheduleDto.ts
 import { Schedule } from "@/domain/entities/Schedule";
 
 export class CreateScheduleDto {

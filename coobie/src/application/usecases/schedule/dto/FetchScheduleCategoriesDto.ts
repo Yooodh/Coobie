@@ -1,4 +1,3 @@
-// application/usecases/schedule/dto/FetchScheduleCategoryDto.ts
 import { ScheduleCategory } from "@/domain/entities/ScheduleCategory";
 
 export class FetchScheduleCategoryDto {

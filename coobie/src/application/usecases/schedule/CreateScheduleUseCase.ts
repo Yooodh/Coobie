@@ -1,4 +1,3 @@
-// src/application/usecases/schedule/CreateScheduleUseCase.ts
 import { ScheduleRepository } from "@/domain/repositories/ScheduleRepository";
 import { Schedule } from "@/domain/entities/Schedule";
 import {

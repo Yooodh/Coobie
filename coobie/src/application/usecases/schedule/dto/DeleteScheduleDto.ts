@@ -1,6 +1,5 @@
 import { Schedule } from "@/domain/entities/Schedule";
 
-// src/application/usecases/schedule/dto/DeleteScheduleDto.ts
 export class DeleteScheduleDto {
   constructor(
     public readonly id: number,

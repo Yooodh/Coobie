@@ -104,9 +104,8 @@ const Chart: React.FC<ChartProps> = ({
           >
             <span className="text-sm pl-2 text-gray-400">
               {hour < 12
-                ? `오전 ${hour}` // 오전 (AM) 시간 표시
+                ? `오전 ${hour}`
                 : `오후 ${hour === 12 ? 12 : hour - 12}`}{" "}
-              // 오후 (PM) 시간 표시 (12시는 그대로, 나머지는 -12)
             </span>
           </div>
         ))}
