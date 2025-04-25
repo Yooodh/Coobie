@@ -1,4 +1,3 @@
-import { Department } from "@/domain/entities/Department";
 import { Position } from "@/domain/entities/Position";
 import { PositionRepository } from "@/domain/repositories/PositionRepository";
 import { createBrowserSupabaseClient } from "@/utils/supabase/client";
@@ -107,7 +106,6 @@ export class SbPositionRepository implements PositionRepository {
         .eq("role_id", "01") // 회사 관리자
         .single();
 
-
       if (userError) {
         console.error("사용자 조회 오류:", userError);
         throw new Error(`사용자 조회 중 오류: ${userError.message}`);
@@ -186,14 +184,50 @@ export class SbPositionRepository implements PositionRepository {
   }
 
   async delete(id: number): Promise<void> {
-    // 소프트 삭제 방식 (deleted_at 필드 업데이트)
-    const { error } = await this.supabase
-      .from("position")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("ID", id);
+    try {
+      // 직급 존재 여부 확인
+      const { data: existingPos, error: checkError } = await this.supabase
+        .from("position")
+        .select("*")
+        .eq("ID", id)
+        .is("deleted_at", null)
+        .maybeSingle();
 
-    if (error) {
-      throw new Error(`직급 삭제 중 오류: ${error.message}`);
+      if (checkError) {
+        throw new Error(`직급 조회 중 오류: ${checkError.message}`);
+      }
+
+      if (!existingPos) {
+        throw new Error(`ID가 ${id}인 직급을 찾을 수 없습니다`);
+      }
+
+      // 해당 직급을 사용 중인 사용자가 있는지 확인
+      const { count: userCount, error: countError } = await this.supabase
+        .from("user")
+        .select("*", { count: "exact", head: true })
+        .eq("position_id", id)
+        .is("deleted_at", null);
+
+      if (countError) {
+        throw new Error(`직급 사용 여부 확인 중 오류: ${countError.message}`);
+      }
+
+      if (userCount && userCount > 0) {
+        throw new Error(`현재 ${userCount}명의 사용자가 이 직급을 사용하고 있어 삭제할 수 없습니다`);
+      }
+
+      // 소프트 삭제 방식 (deleted_at 필드 업데이트)
+      const { error } = await this.supabase
+        .from("position")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("ID", id);
+
+      if (error) {
+        throw new Error(`직급 삭제 중 오류: ${error.message}`);
+      }
+    } catch (error) {
+      console.error(`직급 ID ${id} 삭제 중 오류:`, error);
+      throw error;
     }
   }
 }
