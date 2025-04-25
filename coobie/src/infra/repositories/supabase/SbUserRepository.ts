@@ -42,10 +42,7 @@ export class SbUserRepository implements UserRepository {
   }
 
   async findAll(filter?: UserFilter): Promise<User[]> {
-    let query = this.supabase
-      .from("user")
-      .select("*")
-      .is("deleted_at", null);
+    let query = this.supabase.from("user").select("*").is("deleted_at", null);
 
     if (filter) {
       if (filter.username) {
@@ -73,10 +70,10 @@ export class SbUserRepository implements UserRepository {
         query = query.eq("is_approved", filter.isApproved);
       }
       if (filter.businessNumber) {
-        console.log("사업자 번호로 필터링", filter.businessNumber)
+        console.log("사업자 번호로 필터링", filter.businessNumber);
         query = query.eq("business_number", filter.businessNumber);
       }
-      
+
       const offset = filter.offset ?? 0;
       const limit = filter.limit ?? 10;
       query = query.range(offset, offset + limit - 1);
@@ -93,7 +90,7 @@ export class SbUserRepository implements UserRepository {
       throw new Error(`사용자 목록을 가져오는 중 오류 발생: ${error.message}`);
     }
 
-    return (data || []).map(user => this.mapToUser(user));
+    return (data || []).map((user) => this.mapToUser(user));
   }
 
   async findByRoleId(roleId: string, filter?: UserFilter): Promise<User[]> {
@@ -117,7 +114,7 @@ export class SbUserRepository implements UserRepository {
       if (filter.businessNumber) {
         query = query.eq("business_number", filter.businessNumber);
       }
-      
+
       const offset = filter.offset ?? 0;
       const limit = filter.limit ?? 10;
       query = query.range(offset, offset + limit - 1);
@@ -126,10 +123,12 @@ export class SbUserRepository implements UserRepository {
     const { data, error } = await query;
 
     if (error) {
-      throw new Error(`역할별 사용자 목록을 가져오는 중 오류 발생: ${error.message}`);
+      throw new Error(
+        `역할별 사용자 목록을 가져오는 중 오류 발생: ${error.message}`
+      );
     }
 
-    return (data || []).map(user => this.mapToUser(user));
+    return (data || []).map((user) => this.mapToUser(user));
   }
 
   async save(user: User): Promise<User> {
@@ -217,7 +216,7 @@ export class SbUserRepository implements UserRepository {
         query = query.eq("is_approved", filter.isApproved);
       }
       if (filter.businessNumber) {
-        query=query.eq("business_number", filter.businessNumber)
+        query = query.eq("business_number", filter.businessNumber);
       }
     }
 
@@ -233,15 +232,29 @@ export class SbUserRepository implements UserRepository {
   async resetPassword(id: string, defaultPassword: string): Promise<void> {
     const { error } = await this.supabase
       .from("user")
-      .update({ 
+      .update({
         password: defaultPassword,
         is_locked: false,
-        login_attempts: 0
+        login_attempts: 0,
       })
       .eq("ID", id);
 
     if (error) {
       throw new Error(`비밀번호 재설정 중 오류 발생: ${error.message}`);
+    }
+  }
+
+  async updatePassword(id: string, newPassword: string): Promise<void> {
+    const { error } = await this.supabase
+      .from("user")
+      .update({
+        password: newPassword,
+        login_attempts: 0, // 비밀번호 변경 시 로그인 시도 횟수 초기화
+      })
+      .eq("ID", id);
+
+    if (error) {
+      throw new Error(`비밀번호 변경 중 오류 발생: ${error.message}`);
     }
   }
 
@@ -275,7 +288,9 @@ export class SbUserRepository implements UserRepository {
       .eq("ID", id);
 
     if (updateError) {
-      throw new Error(`로그인 시도 횟수 업데이트 중 오류 발생: ${updateError.message}`);
+      throw new Error(
+        `로그인 시도 횟수 업데이트 중 오류 발생: ${updateError.message}`
+      );
     }
 
     return newAttempts;
@@ -303,7 +318,10 @@ export class SbUserRepository implements UserRepository {
     }
   }
 
-  async updateStatus(id: string, status: "online" | "offline" | "busy" | "away"): Promise<void> {
+  async updateStatus(
+    id: string,
+    status: "online" | "offline" | "busy" | "away"
+  ): Promise<void> {
     const { error } = await this.supabase
       .from("user")
       .update({ status })
