@@ -40,8 +40,8 @@ export default function RootDashboard() {
         throw new Error("데이터를 불러오는데 실패했습니다");
       }
 
-      const pendingData = await pendingResponse.json() as CompaniesResponse;
-      const approvedData = await approvedResponse.json() as CompaniesResponse;
+      const pendingData = (await pendingResponse.json()) as CompaniesResponse;
+      const approvedData = (await approvedResponse.json()) as CompaniesResponse;
 
       setPendingCompanies(pendingData.companies || []);
       setApprovedCompanies(approvedData.companies || []);
@@ -69,7 +69,7 @@ export default function RootDashboard() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json() as ApiResponse<null>;
+        const errorData = (await response.json()) as ApiResponse<null>;
         throw new Error(errorData.error || "회사 승인에 실패했습니다");
       }
 
@@ -106,7 +106,7 @@ export default function RootDashboard() {
         });
 
         if (!response.ok) {
-          const errorData = await response.json() as ApiResponse<null>;
+          const errorData = (await response.json()) as ApiResponse<null>;
           throw new Error(errorData.error || "회사 가입 거절에 실패했습니다");
         }
 
@@ -126,33 +126,38 @@ export default function RootDashboard() {
     }
   };
 
-  // 회사 잠금 해제 처리
-  const handleUnlock = async (companyId: string) => {
+  // 비밀번호 초기화 및 잠금해제 처리
+  const handleResetPassword = async (companyId: string) => {
     try {
-      const response = await fetch(`/api/companies/${companyId}/unlock`, {
-        method: "PATCH",
-      });
+      const response = await fetch(
+        `/api/companies/${companyId}/reset-password`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ defaultPassword: "0000" }),
+        }
+      );
 
       if (!response.ok) {
-        const errorData = await response.json() as ApiResponse<null>;
-        throw new Error(
-          errorData.error || "회사 계정 잠금 해제에 실패했습니다"
-        );
+        const errorData = (await response.json()) as ApiResponse<null>;
+        throw new Error(errorData.error || `오류 ${response.status}`);
       }
 
-      // UI 업데이트
+      // UI 업데이트: 회사의 잠금 상태 해제 처리
       setApprovedCompanies((prev) =>
         prev.map((company) =>
           company.id === companyId ? { ...company, isLocked: false } : company
         )
       );
 
-      alert("회사 계정이 잠금 해제되었고 비밀번호가 초기화되었습니다");
+      alert("회사 관리자 계정의 비밀번호가 초기화되고 잠금이 해제되었습니다");
     } catch (err) {
       if (err instanceof Error) {
-        alert(err.message || "회사 계정 잠금 해제 중 오류가 발생했습니다");
+        alert(
+          err.message || "비밀번호 초기화 및 잠금해제 중 오류가 발생했습니다."
+        );
       } else {
-        alert("회사 계정 잠금 해제 중 오류가 발생했습니다");
+        alert("비밀번호 초기화 및 잠금해제 중 오류가 발생했습니다.");
       }
     }
   };
@@ -168,7 +173,7 @@ export default function RootDashboard() {
         });
 
         if (!response.ok) {
-          const errorData = await response.json() as ApiResponse<null>;
+          const errorData = (await response.json()) as ApiResponse<null>;
           throw new Error(errorData.error || "회사 삭제에 실패했습니다");
         }
 
@@ -184,35 +189,6 @@ export default function RootDashboard() {
         } else {
           alert("회사 삭제 중 오류가 발생했습니다");
         }
-      }
-    }
-  };
-
-  // 관리자 비밀번호 초기화
-  const handleResetPassword = async (companyId: string) => {
-    try {
-      const response = await fetch(
-        `/api/companies/${companyId}/reset-password`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ defaultPassword: "0000" }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json() as ApiResponse<null>;
-        throw new Error(errorData.error || `오류 ${response.status}`);
-      }
-
-      alert("회사 관리자 계정의 비밀번호가 초기화되었습니다");
-    } catch (err) {
-      if (err instanceof Error) {
-        alert(
-          err.message || "회사 관리자 비밀번호 초기화 중 오류가 발생했습니다."
-        );
-      } else {
-        alert("회사 관리자 비밀번호 초기화 중 오류가 발생했습니다.");
       }
     }
   };
@@ -310,8 +286,8 @@ export default function RootDashboard() {
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }`}
                 >
-                    회사 관리
-                    {approvedCompanies.length > 0 && (
+                  회사 관리
+                  {approvedCompanies.length > 0 && (
                     <span className="ml-2 bg-amber-100 text-amber-800 py-0.5 px-2 rounded-full text-xs">
                       {approvedCompanies.length}
                     </span>
@@ -420,18 +396,13 @@ export default function RootDashboard() {
                           <div className="flex space-x-2">
                             <button
                               onClick={() => handleResetPassword(company.id)}
-                              className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-orange-500 hover:bg-orange-500 focus:outline-none focus-within:ring-2 focus:ring-orange-500"
+                              className={`inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white ${
+                                company.isLocked &&
+                                "bg-orange-500 hover:bg-orange-600"
+                              } `}
                             >
                               비밀번호 초기화
                             </button>
-                            {company.isLocked && (
-                              <button
-                                onClick={() => handleUnlock(company.id)}
-                                className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                              >
-                                잠금해제
-                              </button>
-                            )}
                             <button
                               onClick={() => handleDelete(company.id)}
                               className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"

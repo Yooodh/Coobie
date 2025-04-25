@@ -1,11 +1,11 @@
-// src/application/usecases/company/ResetCompanyPasswordUseCase.ts (수정됨)
+// src/application/usecases/company/ResetCompanyPasswordUseCase.ts
 import { CompanyRepository } from "@/domain/repositories/CompanyRepository";
 
 export class ResetCompanyPasswordUseCase {
   constructor(private companyRepository: CompanyRepository) {}
 
   /**
-   * 회사 관리자의 비밀번호를 초기화합니다.
+   * 회사 관리자의 비밀번호를 초기화하고 계정 잠금을 해제합니다.
    * @param companyId 회사 ID
    * @param defaultPassword 초기화할 비밀번호 (기본값: "0000")
    */
@@ -17,7 +17,7 @@ export class ResetCompanyPasswordUseCase {
         throw new Error(`ID가 ${companyId}인 회사를 찾을 수 없습니다`);
       }
 
-      // 회사의 관리자 계정 비밀번호 초기화 및 잠금 해제
+      // 회사의 관리자 계정 비밀번호 초기화 및 잠금 해제 (항상 함께 처리)
       await this.companyRepository.resetPassword(companyId, defaultPassword);
       
       // 회사 계정이 잠겨있는 경우 잠금 해제
