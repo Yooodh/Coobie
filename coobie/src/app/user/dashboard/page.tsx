@@ -116,18 +116,6 @@ export default function UserDashboard() {
     setFilteredUsers(filtered);
   }, [searchTerm, users]);
 
-  // 로그아웃 처리
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-      });
-      router.push("/");
-    } catch (err) {
-      console.error("로그아웃 중 오류가 발생했습니다:", err);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -192,16 +180,6 @@ export default function UserDashboard() {
           )}
         </div>
       </main>
-
-      {/* 로그아웃 버튼 */}
-      <div className="fixed top-6 right-6">
-        <button
-          onClick={handleLogout}
-          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-        >
-          로그아웃
-        </button>
-      </div>
     </div>
   );
 }
