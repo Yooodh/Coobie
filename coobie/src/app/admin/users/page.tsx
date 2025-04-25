@@ -32,7 +32,7 @@ export default function UserManagementPage() {
   const [searchType, setSearchType] = useState("전체");
   const [loggingOut, setLoggingOut] = useState(false);
   const [currentUser, setCurrentUser] = useState<AuthUserDto | null>(null);
-  
+
   // 모달 관련 상태 추가
   const [selectedUser, setSelectedUser] = useState<UserListDto | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -77,7 +77,6 @@ export default function UserManagementPage() {
 
       console.log("요청 URL:", `/api/users?${queryParams.toString()}`);
 
-
       // 필터 추가
       if (searchTerm) {
         if (searchType === "이름") {
@@ -96,7 +95,7 @@ export default function UserManagementPage() {
         throw new Error(`오류: ${response.status}`);
       }
 
-      const data = await response.json() as UsersApiResponse;
+      const data = (await response.json()) as UsersApiResponse;
       console.log("사용자 데이터:", data);
       setUsers(data.users);
       setTotalPages(data.totalPages);
@@ -117,7 +116,7 @@ export default function UserManagementPage() {
       fetchDepartmentsAndPositions();
       fetchUsers();
     }
-  }, [currentUser, currentPage, searchTerm, searchType])
+  }, [currentUser, currentPage, searchTerm, searchType]);
 
   // 부서 및 직급 정보 가져오기
   const fetchDepartmentsAndPositions = async () => {
@@ -137,7 +136,7 @@ export default function UserManagementPage() {
       ]);
 
       if (deptResponse.ok) {
-        const deptData = await deptResponse.json() as DepartmentDto[];
+        const deptData = (await deptResponse.json()) as DepartmentDto[];
         console.log("부서 데이터:", deptData);
         setDepartments(deptData);
       } else {
@@ -148,7 +147,7 @@ export default function UserManagementPage() {
       }
 
       if (posResponse.ok) {
-        const posData = await posResponse.json() as PositionDto[];
+        const posData = (await posResponse.json()) as PositionDto[];
         console.log("직급 데이터:", posData);
         setPositions(posData);
       } else {
@@ -180,7 +179,7 @@ export default function UserManagementPage() {
         });
 
         if (!response.ok) {
-          const errorData = await response.json() as ApiError;
+          const errorData = (await response.json()) as ApiError;
           throw new Error(errorData.error || `오류: ${response.status}`);
         }
 
@@ -212,7 +211,7 @@ export default function UserManagementPage() {
         });
 
         if (!response.ok) {
-          const errorData = await response.json() as ApiError;
+          const errorData = (await response.json()) as ApiError;
           throw new Error(errorData.error || `오류: ${response.status}`);
         }
 
@@ -240,7 +239,7 @@ export default function UserManagementPage() {
         });
 
         if (!response.ok) {
-          const errorData = await response.json() as ApiError;
+          const errorData = (await response.json()) as ApiError;
           throw new Error(errorData.error || `오류: ${response.status}`);
         }
 
@@ -285,11 +284,15 @@ export default function UserManagementPage() {
       const userData: UpdatedUserData = {
         username: updatedUser.username,
         nickname: updatedUser.nickname,
-        departmentId: updatedUser.departmentId !== undefined ? updatedUser.departmentId : null,
-        positionId: updatedUser.positionId !== undefined ? updatedUser.positionId : null,
+        departmentId:
+          updatedUser.departmentId !== undefined
+            ? updatedUser.departmentId
+            : null,
+        positionId:
+          updatedUser.positionId !== undefined ? updatedUser.positionId : null,
         isLocked: updatedUser.isLocked,
         isApproved: updatedUser.isApproved,
-        notificationOn: updatedUser.notificationOn
+        notificationOn: updatedUser.notificationOn,
       };
 
       // API 호출
@@ -302,7 +305,7 @@ export default function UserManagementPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json() as ApiError;
+        const errorData = (await response.json()) as ApiError;
         throw new Error(errorData.error || `오류: ${response.status}`);
       }
 
@@ -340,7 +343,7 @@ export default function UserManagementPage() {
     }
   };
 
-  console.log("currentUser:", currentUser)
+  console.log("currentUser:", currentUser);
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -349,7 +352,9 @@ export default function UserManagementPage() {
         <div className="flex items-center">
           <div className="w-16 h-16 bg-gray-200 rounded-full mr-4"></div>
           <div>
-            <h2 className="text-xl font-bold">반갑습니다! {currentUser?.nickname || "관리자"}님</h2>
+            <h2 className="text-xl font-bold">
+              반갑습니다! {currentUser?.nickname || "관리자"}님
+            </h2>
             <p className="text-gray-600">사원 관리</p>
           </div>
         </div>

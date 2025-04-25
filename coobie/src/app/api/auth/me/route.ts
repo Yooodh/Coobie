@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   try {
     // 쿠키에서 토큰 가져오기
     const token = (await cookies()).get("auth_token")?.value;
-    
+
     if (!token) {
       return NextResponse.json(
         { error: "인증되지 않은 요청입니다" },
@@ -63,8 +63,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       user: authUser,
     });
-  } catch (error: any) {
-    console.error("사용자 정보 조회 중 오류 발생:", error);
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error("사용자 정보 조회 중 오류 발생:", error);
+    }
     return NextResponse.json(
       { error: "사용자 정보 조회 중 오류가 발생했습니다" },
       { status: 500 }
