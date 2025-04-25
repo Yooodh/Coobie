@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import CategoryInput from "@/app/components/admin/CategortInput";
+import PasswordChangeForm from "@/app/components/common/PasswordChangeForm";
 
 interface Department {
   id: number;
@@ -18,6 +19,7 @@ export default function SettingsPage() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
 
   // 부서 및 직급 데이터 가져오기
   const fetchData = async () => {
@@ -236,12 +238,22 @@ export default function SettingsPage() {
           {/* 비밀번호 변경 */}
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h3 className="text-lg font-semibold mb-4">계정 설정</h3>
-            <button
-              onClick={handlePasswordChange}
-              className="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-2 rounded"
-            >
-              비밀번호 재설정
-            </button>
+            {showPasswordForm ? (
+              <PasswordChangeForm 
+                onSuccess={() => {
+                  setShowPasswordForm(false);
+                  alert("비밀번호가 성공적으로 변경되었습니다.");
+                }}
+                onCancel={() => setShowPasswordForm(false)}
+              />
+            ) : (
+              <button
+                onClick={() => setShowPasswordForm(true)}
+                className="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-2 rounded"
+              >
+                비밀번호 재설정
+              </button>
+            )}
           </div>
         </>
       )}
