@@ -358,50 +358,47 @@ export class SbCompanyRepository implements CompanyRepository {
   }
 
   async resetPassword(id: string, defaultPassword: string): Promise<void> {
-    // 회사의 관리자 사용자를 찾아서 비밀번호 초기화
-    const supabase = await createBrowserSupabaseClient();
-
-    // 회사 정보 조회
-    const { data: companyData, error: companyError } = await supabase
-      .from("company")
-      .select("business_number")
-      .eq("ID", id)
-      .single();
-
-    if (companyError) {
-      throw new Error(
-        `Failed to fetch company info with id ${id}: ${companyError.message}`
-      );
-    }
-
-    // 회사 관리자 사용자 찾기 (role_id = 01 & business_number = company.business_number)
-    const { data: adminData, error: adminError } = await supabase
-      .from("user")
-      .select("ID")
-      .eq("role_id", "01")
-      .eq("business_number", companyData.business_number)
-      .single();
-
-    if (adminError) {
-      throw new Error(
-        `Failed to find admin user for company id ${id}: ${adminError.message}`
-      );
-    }
-
-    // 관리자 비밀번호 초기화
-    const { error: updateError } = await supabase
-      .from("user")
-      .update({
-        password: defaultPassword,
-        is_locked: false,
-        login_attempts: 0,
-      })
-      .eq("ID", adminData.ID);
-
-    if (updateError) {
-      throw new Error(
-        `Failed to reset password for admin user with id ${adminData.ID}: ${updateError.message}`
-      );
+    try {
+      const supabase = await createBrowserSupabaseClient();
+  
+      // 회사 정보 조회 (user_id 컬럼을 이용하여 관리자 ID 직접 가져오기)
+      const { data: companyData, error: companyError } = await supabase
+        .from("company")
+        .select("user_id")  // business_number 대신 user_id 사용
+        .eq("ID", id)
+        .single();
+  
+      if (companyError) {
+        throw new Error(
+          `회사 정보를 가져오는 중 오류 발생 (ID: ${id}): ${companyError.message}`
+        );
+      }
+  
+      if (!companyData || !companyData.user_id) {
+        throw new Error(`회사 관리자 정보를 찾을 수 없습니다 (회사 ID: ${id})`);
+      }
+  
+      // 관리자 ID를 직접 사용하여 비밀번호 초기화
+      const adminId = companyData.user_id;
+      
+      // 관리자 비밀번호 초기화 및 잠금 해제
+      const { error: updateError } = await supabase
+        .from("user")
+        .update({
+          password: defaultPassword,
+          is_locked: false,
+          login_attempts: 0,
+        })
+        .eq("ID", adminId);
+  
+      if (updateError) {
+        throw new Error(
+          `관리자 비밀번호 초기화 중 오류 발생 (ID: ${adminId}): ${updateError.message}`
+        );
+      }
+    } catch (error) {
+      console.error("비밀번호 초기화 중 예외 발생:", error);
+      throw error;
     }
   }
 }

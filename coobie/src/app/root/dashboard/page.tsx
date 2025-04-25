@@ -5,7 +5,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CompanyDto } from "@/application/usecases/company/dto/CompanyDto";
 
-
 export default function RootDashboard() {
   const router = useRouter();
   const [pendingCompanies, setPendingCompanies] = useState<CompanyDto[]>([]);
@@ -18,20 +17,20 @@ export default function RootDashboard() {
   const fetchCompanies = async () => {
     try {
       setLoading(true);
-      
+
       // 승인 대기 중인 회사 목록 가져오기
       const pendingResponse = await fetch("/api/companies?isApproved=false");
-      
+
       // 승인된 회사 목록 가져오기
       const approvedResponse = await fetch("/api/companies?isApproved=true");
-      
+
       if (!pendingResponse.ok || !approvedResponse.ok) {
         throw new Error("데이터를 불러오는데 실패했습니다");
       }
-      
+
       const pendingData = await pendingResponse.json();
       const approvedData = await approvedResponse.json();
-      
+
       setPendingCompanies(pendingData.companies || []);
       setApprovedCompanies(approvedData.companies || []);
       setError(null);
@@ -41,7 +40,7 @@ export default function RootDashboard() {
       setLoading(false);
     }
   };
-  
+
   useEffect(() => {
     fetchCompanies();
   }, []);
@@ -52,19 +51,26 @@ export default function RootDashboard() {
       const response = await fetch(`/api/companies/${companyId}/approve`, {
         method: "PATCH",
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "회사 승인에 실패했습니다");
       }
-      
+
       // UI 업데이트
-      const approvedCompany = pendingCompanies.find(company => company.id === companyId);
+      const approvedCompany = pendingCompanies.find(
+        (company) => company.id === companyId
+      );
       if (approvedCompany) {
-        setPendingCompanies(prev => prev.filter(company => company.id !== companyId));
-        setApprovedCompanies(prev => [...prev, {...approvedCompany, isApproved: true}]);
+        setPendingCompanies((prev) =>
+          prev.filter((company) => company.id !== companyId)
+        );
+        setApprovedCompanies((prev) => [
+          ...prev,
+          { ...approvedCompany, isApproved: true },
+        ]);
       }
-      
+
       alert("회사가 성공적으로 승인되었습니다");
     } catch (err: any) {
       alert(err.message || "회사 승인 중 오류가 발생했습니다");
@@ -78,15 +84,17 @@ export default function RootDashboard() {
         const response = await fetch(`/api/companies/${companyId}/reject`, {
           method: "PATCH",
         });
-        
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || "회사 가입 거절에 실패했습니다");
         }
-        
+
         // UI 업데이트
-        setPendingCompanies(prev => prev.filter(company => company.id !== companyId));
-        
+        setPendingCompanies((prev) =>
+          prev.filter((company) => company.id !== companyId)
+        );
+
         alert("회사 가입 신청이 거절되었습니다");
       } catch (err: any) {
         alert(err.message || "회사 가입 거절 중 오류가 발생했습니다");
@@ -100,21 +108,21 @@ export default function RootDashboard() {
       const response = await fetch(`/api/companies/${companyId}/unlock`, {
         method: "PATCH",
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "회사 계정 잠금 해제에 실패했습니다");
+        throw new Error(
+          errorData.error || "회사 계정 잠금 해제에 실패했습니다"
+        );
       }
-      
+
       // UI 업데이트
-      setApprovedCompanies(prev => 
-        prev.map(company => 
-          company.id === companyId 
-            ? {...company, isLocked: false} 
-            : company
+      setApprovedCompanies((prev) =>
+        prev.map((company) =>
+          company.id === companyId ? { ...company, isLocked: false } : company
         )
       );
-      
+
       alert("회사 계정이 잠금 해제되었고 비밀번호가 초기화되었습니다");
     } catch (err: any) {
       alert(err.message || "회사 계정 잠금 해제 중 오류가 발생했습니다");
@@ -123,20 +131,24 @@ export default function RootDashboard() {
 
   // 회사 삭제 처리
   const handleDelete = async (companyId: string) => {
-    if (confirm("정말 이 회사를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) {
+    if (
+      confirm("정말 이 회사를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")
+    ) {
       try {
         const response = await fetch(`/api/companies/${companyId}`, {
           method: "DELETE",
         });
-        
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || "회사 삭제에 실패했습니다");
         }
-        
+
         // UI 업데이트
-        setApprovedCompanies(prev => prev.filter(company => company.id !== companyId));
-        
+        setApprovedCompanies((prev) =>
+          prev.filter((company) => company.id !== companyId)
+        );
+
         alert("회사가 성공적으로 삭제되었습니다");
       } catch (err: any) {
         alert(err.message || "회사 삭제 중 오류가 발생했습니다");
@@ -144,30 +156,55 @@ export default function RootDashboard() {
     }
   };
 
+  // 관리자 비밀번호 초기화
+  const handleResetPassword = async (comapnyId: string) => {
+    try {
+      const response = await fetch(
+        `/api/companies/${comapnyId}/reset-password`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ defaultPassword: "0000" }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `오류 ${response.statusa}`);
+      }
+
+      alert("회사 관리자 계정의 비밀번호가 초기화되었습니다");
+    } catch (err: any) {
+      alert(
+        err.message || "회사 관리자 비밀번호 초기화 중 오류가 발생했습니다."
+      );
+    }
+  };
+
   // 날짜 포맷 유틸리티
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
+    return date.toLocaleDateString("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     });
   };
 
   // 로그아웃 처리
   const handleLogout = async () => {
     try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST'
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
       });
-      
+
       if (response.ok) {
-        router.push('/root/login');
+        router.push("/root/login");
       } else {
-        console.error('로그아웃 응답 오류:', response.status);
+        console.error("로그아웃 응답 오류:", response.status);
       }
     } catch (err) {
-      console.error('로그아웃 중 오류 발생:', err);
+      console.error("로그아웃 중 오류 발생:", err);
     }
   };
 
@@ -179,11 +216,15 @@ export default function RootDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <span className="text-amber-600 font-semibold text-xl">Coobie</span>
+              <span className="text-amber-600 font-semibold text-xl">
+                Coobie
+              </span>
             </div>
-            <h1 className="ml-4 text-xl font-bold text-gray-900">루트 관리자 대시보드</h1>
+            <h1 className="ml-4 text-xl font-bold text-gray-900">
+              루트 관리자 대시보드
+            </h1>
           </div>
-          <button 
+          <button
             onClick={handleLogout}
             className="ml-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
           >
@@ -244,7 +285,9 @@ export default function RootDashboard() {
             {activeTab === "pending" && (
               <div className="bg-white shadow overflow-hidden sm:rounded-md">
                 <div className="px-4 py-5 sm:px-6">
-                  <h2 className="text-lg font-medium leading-6 text-gray-900">가입 신청 리스트</h2>
+                  <h2 className="text-lg font-medium leading-6 text-gray-900">
+                    가입 신청 리스트
+                  </h2>
                   <p className="mt-1 text-sm text-gray-500">
                     승인 대기 중인 회사 목록입니다
                   </p>
@@ -265,7 +308,9 @@ export default function RootDashboard() {
                             <div className="mt-1 flex items-center text-sm text-gray-500">
                               <span>사업자번호: {company.businessNumber}</span>
                               <span className="mx-2">•</span>
-                              <span>신청일: {formatDate(company.createdAt)}</span>
+                              <span>
+                                신청일: {formatDate(company.createdAt)}
+                              </span>
                             </div>
                           </div>
                           <div className="flex space-x-2">
@@ -294,7 +339,9 @@ export default function RootDashboard() {
             {activeTab === "approved" && (
               <div className="bg-white shadow overflow-hidden sm:rounded-md">
                 <div className="px-4 py-5 sm:px-6">
-                  <h2 className="text-lg font-medium leading-6 text-gray-900">회사 관리</h2>
+                  <h2 className="text-lg font-medium leading-6 text-gray-900">
+                    회사 관리
+                  </h2>
                   <p className="mt-1 text-sm text-gray-500">
                     등록된 회사 목록입니다
                   </p>
@@ -313,21 +360,31 @@ export default function RootDashboard() {
                               <h3 className="text-lg font-medium text-gray-900">
                                 {company.companyName}
                               </h3>
-                              <span className={`ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                company.isLocked
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-green-100 text-green-800"
-                              }`}>
+                              <span
+                                className={`ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                  company.isLocked
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-green-100 text-green-800"
+                                }`}
+                              >
                                 {company.isLocked ? "잠금" : "정상"}
                               </span>
                             </div>
                             <div className="mt-1 flex items-center text-sm text-gray-500">
                               <span>사업자번호: {company.businessNumber}</span>
                               <span className="mx-2">•</span>
-                              <span>등록일: {formatDate(company.createdAt)}</span>
+                              <span>
+                                등록일: {formatDate(company.createdAt)}
+                              </span>
                             </div>
                           </div>
                           <div className="flex space-x-2">
+                            <button
+                              onClick={() => handleResetPassword(company.id)}
+                              className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-orange-500 hover:bg-orange-500 focus:outline-none focus-within:ring-2 focus:ring-orange-500"
+                            >
+                              비밀번호 초기화
+                            </button>
                             {company.isLocked && (
                               <button
                                 onClick={() => handleUnlock(company.id)}

@@ -7,10 +7,10 @@ import { Department } from "@/domain/entities/Department";
 import { Position } from "@/domain/entities/Position";
 import SearchTabs from "@/app/components/admin/SearchTabs";
 import UserTable from "@/app/components/admin/UserTable";
-import UserModal from "@/app/components/admin/UserModal"; // 추가
+import UserModal from "@/app/components/admin/UserModal";
 import { LogoutUseCase } from "@/application/usecases/auth/LogoutUseCase";
-import { SbUserRepository } from "@/infra/repositories/supabase/SbUserRepository"; // 추가
-import { UpdateUserUseCase } from "@/application/usecases/user/UpdateUserUseCase"; // 추가
+import { SbUserRepository } from "@/infra/repositories/supabase/SbUserRepository";
+import { UpdateUserUseCase } from "@/application/usecases/user/UpdateUserUseCase";
 
 export default function UserManagementPage() {
   const [users, setUsers] = useState<User[]>([]);
