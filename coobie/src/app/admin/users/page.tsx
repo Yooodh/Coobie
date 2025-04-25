@@ -340,6 +340,8 @@ export default function UserManagementPage() {
     }
   };
 
+  console.log("currentUser:", currentUser)
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
       {/* 회사 관리자 정보 헤더 */}
@@ -347,7 +349,7 @@ export default function UserManagementPage() {
         <div className="flex items-center">
           <div className="w-16 h-16 bg-gray-200 rounded-full mr-4"></div>
           <div>
-            <h2 className="text-xl font-bold">반갑습니다! 관리자님</h2>
+            <h2 className="text-xl font-bold">반갑습니다! {currentUser?.nickname || "관리자"}님</h2>
             <p className="text-gray-600">사원 관리</p>
           </div>
         </div>
