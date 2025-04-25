@@ -86,11 +86,17 @@ export default function SettingsPage() {
         throw new Error(errorData.error || `오류: ${response.status}`);
       }
 
-      // 추가 성공 후 목록 새로고침
-      fetchData();
+      // 추가 성공 후, 데이터 새로고침 대신 반환된 부서 데이터를 사용하여 상태 업데이트
+      const newDepartment = await response.json();
+      setDepartments(prev => [...prev, {
+        id: newDepartment.id, 
+        departmentName: newDepartment.departmentName
+      }]);
+      
+      return Promise.resolve();
     } catch (err: any) {
       console.error("부서 추가 실패:", err);
-      throw new Error(err.message || "부서 추가에 실패했습니다");
+      return Promise.reject(new Error(err.message || "부서 추가에 실패했습니다"));
     }
   };
 
@@ -110,31 +116,74 @@ export default function SettingsPage() {
         throw new Error(errorData.error || `오류: ${response.status}`);
       }
 
-      // 추가 성공 후 목록 새로고침
-      fetchData();
+      // 추가 성공 후, 데이터 새로고침 대신 반환된 직급 데이터를 사용하여 상태 업데이트
+      const newPosition = await response.json();
+      setPositions(prev => [...prev, {
+        id: newPosition.id, 
+        positionName: newPosition.positionName
+      }]);
+      
+      return Promise.resolve();
     } catch (err: any) {
       console.error("직급 추가 실패:", err);
-      throw new Error(err.message || "직급 추가에 실패했습니다");
+      return Promise.reject(new Error(err.message || "직급 추가에 실패했습니다"));
     }
   };
 
-  // 부서 삭제 (추후 구현)
+  // 부서 삭제
   const handleDeleteDepartment = async (id: number) => {
-    // TODO: 부서 삭제 API 연동
-    alert("준비 중인 기능입니다");
+    try {
+      const response = await fetch(`/api/departments/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `오류: ${response.status}`);
+      }
+
+      // 삭제 성공 시 해당 부서를 상태에서 제거
+      setDepartments(prev => prev.filter(dept => dept.id !== id));
+      return Promise.resolve();
+    } catch (err: any) {
+      console.error("부서 삭제 실패:", err);
+      return Promise.reject(new Error(err.message || "부서 삭제에 실패했습니다"));
+    }
   };
 
-  // 직급 삭제 (추후 구현)
+  // 직급 삭제
   const handleDeletePosition = async (id: number) => {
-    // TODO: 직급 삭제 API 연동
-    alert("준비 중인 기능입니다");
+    try {
+      const response = await fetch(`/api/positions/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `오류: ${response.status}`);
+      }
+
+      // 삭제 성공 시 해당 직급을 상태에서 제거
+      setPositions(prev => prev.filter(pos => pos.id !== id));
+      return Promise.resolve();
+    } catch (err: any) {
+      console.error("직급 삭제 실패:", err);
+      return Promise.reject(new Error(err.message || "직급 삭제에 실패했습니다"));
+    }
   };
 
+  // 비밀번호 변경 처리
+  const handlePasswordChange = () => {
+    alert("준비 중인 기능입니다. 추후 업데이트 될 예정입니다.");
+  };
+
+  // 사용자 정보 확인 (디버깅용)
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const response = await fetch("/api/auth/me");
         const userData = await response.json();
+        console.log("현재 로그인 사용자 정보:", userData);
       } catch (err) {
         console.error("사용자 정보 조회 실패:", err);
       }
@@ -142,8 +191,6 @@ export default function SettingsPage() {
     
     fetchUserData();
   }, []);
-  
-  
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -186,11 +233,11 @@ export default function SettingsPage() {
             placeholderText="직급명 입력 후 엔터"
           />
 
-          {/* 비밀번호 변경 (추후 구현) */}
+          {/* 비밀번호 변경 */}
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h3 className="text-lg font-semibold mb-4">계정 설정</h3>
             <button
-              onClick={() => alert("준비 중인 기능입니다")}
+              onClick={handlePasswordChange}
               className="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-2 rounded"
             >
               비밀번호 재설정

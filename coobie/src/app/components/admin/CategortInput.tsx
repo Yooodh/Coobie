@@ -24,6 +24,7 @@ export default function CategoryInput({
 }: CategoryInputProps) {
   const [inputValue, setInputValue] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleKeyDown = async (e: KeyboardEvent<HTMLInputElement>) => {
@@ -48,12 +49,22 @@ export default function CategoryInput({
   const handleDelete = async (id: number) => {
     if (!onDelete) return;
 
+    // 삭제 전 확인
+    if (!confirm("정말 이 항목을 삭제하시겠습니까? 해당 항목을 사용 중인 사용자가 있으면 삭제할 수 없습니다.")) {
+      return;
+    }
+
+    setIsDeleting(id);
+    setError(null);
+
     try {
       await onDelete(id);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "삭제 중 오류가 발생했습니다"
       );
+    } finally {
+      setIsDeleting(null);
     }
   };
 
@@ -101,22 +112,34 @@ export default function CategoryInput({
             {onDelete && (
               <button
                 onClick={() => handleDelete(item.id)}
-                className="ml-2 text-gray-500 hover:text-red-500"
+                disabled={isDeleting === item.id}
+                className={`ml-2 flex items-center justify-center w-5 h-5 rounded-full 
+                  ${isDeleting === item.id 
+                     ? "bg-gray-300 text-gray-500 cursor-not-allowed" 
+                     : "text-gray-500 hover:bg-red-100 hover:text-red-500"
+                  }`}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                {isDeleting === item.id ? (
+                  <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  </svg>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                )}
               </button>
             )}
           </div>
