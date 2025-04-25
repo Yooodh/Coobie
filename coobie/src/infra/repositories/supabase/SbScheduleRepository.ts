@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
+import { createBrowserSupabaseClient } from "@/utils/supabase/client";
 import { ScheduleRepository } from "@/domain/repositories/ScheduleRepository";
 import { Schedule } from "@/domain/entities/Schedule";
 import { ScheduleCategory } from "@/domain/entities/ScheduleCategory";
@@ -37,7 +37,7 @@ export class SbScheduleRepository implements ScheduleRepository {
   // 전체 스케줄 조회
   async fetchSchedules(): Promise<Schedule[]> {
     try {
-      const client = await createClient();
+      const client = await createBrowserSupabaseClient();
       const { data, error } = await client
         .from(SbScheduleRepository.SCHEDULE_TABLE)
         .select("*")
@@ -60,7 +60,7 @@ export class SbScheduleRepository implements ScheduleRepository {
   // 전체 스케줄 카테고리 조회
   async fetchScheduleCategories(): Promise<ScheduleCategory[]> {
     try {
-      const client = await createClient();
+      const client = await createBrowserSupabaseClient();
       const { data, error } = await client
         .from(SbScheduleRepository.CATEGORY_TABLE)
         .select("*")
@@ -83,7 +83,7 @@ export class SbScheduleRepository implements ScheduleRepository {
   // ID로 특정 스케줄 카테고리 조회
   async fetchScheduleCategoryById(id: number): Promise<ScheduleCategory> {
     try {
-      const client = await createClient();
+      const client = await createBrowserSupabaseClient();
       const { data, error } = await client
         .from(SbScheduleRepository.CATEGORY_TABLE)
         .select("*")
@@ -110,7 +110,7 @@ export class SbScheduleRepository implements ScheduleRepository {
     newCategoryId: number
   ): Promise<Schedule> {
     try {
-      const client = await createClient();
+      const client = await createBrowserSupabaseClient();
 
       // 스케줄 존재 여부 확인
       const { data: existingSchedule, error: checkError } = await client
@@ -153,7 +153,7 @@ export class SbScheduleRepository implements ScheduleRepository {
     newCategoryId: number
   ): Promise<ScheduleCategory[]> {
     try {
-      const client = await createClient();
+      const client = await createBrowserSupabaseClient();
       const { data, error } = await client
         .from(SbScheduleRepository.CATEGORY_TABLE)
         .update({ schedule_category_id: newCategoryId })
@@ -177,7 +177,7 @@ export class SbScheduleRepository implements ScheduleRepository {
   // 스케줄 생성
   async createSchedule(schedule: Schedule): Promise<Schedule> {
     try {
-      const client = await createClient();
+      const client = await createBrowserSupabaseClient();
       const { data, error } = await client
         .from(SbScheduleRepository.SCHEDULE_TABLE)
         .insert({
@@ -207,7 +207,7 @@ export class SbScheduleRepository implements ScheduleRepository {
   // 스케줄 삭제
   async deleteSchedule(userId: string, scheduleId: number): Promise<Schedule> {
     try {
-      const client = await createClient();
+      const client = await createBrowserSupabaseClient();
 
       // 해당 사용자의 스케줄인지 확인
       const { data: existingSchedule, error: checkError } = await client
@@ -248,7 +248,7 @@ export class SbScheduleRepository implements ScheduleRepository {
   // 스케줄 수정
   async updateSchedule(schedule: Schedule): Promise<Schedule> {
     try {
-      const client = await createClient();
+      const client = await createBrowserSupabaseClient();
 
       // 날짜 포맷 변환
       const updateData = {
