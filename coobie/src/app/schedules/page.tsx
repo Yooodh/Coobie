@@ -7,6 +7,33 @@ import { BlockType, ProfileType } from "@/types/ScheduleType";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+// 날짜 형식 통일을 위한 유틸리티 함수
+function formatDateString(date: string | Date): string {
+  if (typeof date === "string") return date;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+// 겹침 체크 함수 개선
+function isOverlapping(
+  blocks: BlockType[],
+  date: string | Date,
+  startTime: number,
+  duration: number,
+  exceptBlockId?: string
+) {
+  const endTime = startTime + duration;
+  const formattedDate = formatDateString(date);
+  return blocks.some((block) => {
+    if (formatDateString(block.date) !== formattedDate) return false;
+    if (block.id === exceptBlockId) return false;
+    const blockEnd = block.startTime + block.duration;
+    return startTime < blockEnd && endTime > block.startTime;
+  });
+}
+
 export default function Home() {
   const [startHour] = useState(9);
   const [blocks, setBlocks] = useState<BlockType[]>([]);
@@ -17,45 +44,28 @@ export default function Home() {
     avatar: "/placeholder-avatar.jpg",
   });
 
-  // date: YYYY-MM-DD
-  function isOverlapping(
-    blocks: BlockType[],
-    date: string,
-    startTime: number,
-    duration: number,
-    exceptBlockId?: string
-  ) {
-    const endTime = startTime + duration;
-    return blocks.some((block) => {
-      if (block.date !== date) return false;
-      if (block.id === exceptBlockId) return false;
-      const blockEnd = block.startTime + block.duration;
-      return startTime < blockEnd && endTime > block.startTime;
-    });
-  }
-
-  // 블록 추가
   const handleAddBlock = (
     type: "휴가" | "외근" | "회의",
     date: string,
     startTime: number
   ) => {
-    const duration = 1;
+    const duration = type === "회의" ? 1 : 2;
     const endTime = startTime + duration;
 
     if (startTime < startHour || endTime > 19) {
-      setTimeout(() => toast.error("허용된 시간 범위를 벗어났습니다!"), 0);
+      toast.error("허용된 시간 범위를 벗어났습니다!");
       return;
     }
 
+    const formattedDate = formatDateString(date);
     const isOverlap = blocks.some((block) => {
-      if (block.date !== date) return false;
+      if (formatDateString(block.date) !== formattedDate) return false;
       const blockEnd = block.startTime + block.duration;
       return startTime < blockEnd && endTime > block.startTime;
     });
 
     if (isOverlap) {
-      setTimeout(() => toast.error("시간이 겹치는 일정이 있습니다!"), 0);
+      toast.error("시간이 겹치는 일정이 있습니다!");
       return;
     }
 
@@ -67,22 +77,23 @@ export default function Home() {
 
     const newBlock: BlockType = {
       id: `${Date.now()}-${Math.random()}`,
-      date,
+      date: formattedDate,
       startTime,
       duration,
       type,
       color: colors[type],
+      expansionState: type !== "회의" ? 0 : undefined,
     };
 
     setBlocks((prev) => [...prev, newBlock]);
-    setTimeout(() => toast.success("일정이 추가되었습니다!"), 0);
+    toast.success("일정이 추가되었습니다!");
   };
 
-  // 블록 리사이즈
   const handleResizeBlock = (
     id: string,
     newDuration: number,
-    newStartTime?: number
+    newStartTime?: number,
+    expansionState?: 0 | 1 | 2
   ) => {
     let overlap = false;
     setBlocks((prevBlocks) =>
@@ -92,7 +103,11 @@ export default function Home() {
         const endTime = startTime + newDuration;
 
         const isOverlap = prevBlocks.some((b) => {
-          if (b.id === id || b.date !== block.date) return false;
+          if (
+            b.id === id ||
+            formatDateString(b.date) !== formatDateString(block.date)
+          )
+            return false;
           const bEnd = b.startTime + b.duration;
           return startTime < bEnd && endTime > b.startTime;
         });
@@ -101,31 +116,39 @@ export default function Home() {
           overlap = true;
           return block;
         }
-        return { ...block, duration: newDuration, startTime };
+        return {
+          ...block,
+          duration: newDuration,
+          startTime,
+          expansionState: expansionState ?? block.expansionState,
+        };
       })
     );
 
     if (overlap) {
-      setTimeout(() => toast.error("시간이 겹치는 일정이 있습니다!"), 0);
+      toast.error("시간이 겹치는 일정이 있습니다!");
       return false;
     }
     return true;
   };
 
-  // 블록 이동
   const handleMoveBlock = (
     id: string,
-    newDate: string,
-    newStartTime: number
+    newDate: string | Date,
+    newStartTime: number,
+    newDuration?: number
   ) => {
+    const formattedDate = formatDateString(newDate);
     let overlap = false;
     setBlocks((prevBlocks) =>
       prevBlocks.map((block) => {
         if (block.id !== id) return block;
-        const endTime = newStartTime + block.duration;
+        const duration = newDuration ?? block.duration;
+        const endTime = newStartTime + duration;
 
         const isOverlap = prevBlocks.some((b) => {
-          if (b.id === id || b.date !== newDate) return false;
+          if (b.id === id || formatDateString(b.date) !== formattedDate)
+            return false;
           const bEnd = b.startTime + b.duration;
           return newStartTime < bEnd && endTime > b.startTime;
         });
@@ -134,25 +157,30 @@ export default function Home() {
           overlap = true;
           return block;
         }
-        return { ...block, date: newDate, startTime: newStartTime };
+        return {
+          ...block,
+          date: formattedDate,
+          startTime: newStartTime,
+          duration,
+        };
       })
     );
+
     if (overlap) {
-      setTimeout(() => toast.error("시간이 겹치는 일정이 있습니다!"), 0);
+      toast.error("시간이 겹치는 일정이 있습니다!");
       return false;
     }
     return true;
   };
 
-  // 블록 삭제
   const handleDeleteBlock = (id: string) => {
     setBlocks((prevBlocks) => prevBlocks.filter((block) => block.id !== id));
-    setTimeout(() => toast.info("일정이 삭제되었습니다!"), 0);
+    toast.info("일정이 삭제되었습니다!");
   };
 
   const handleSave = () => {
     localStorage.setItem("blocks", JSON.stringify(blocks));
-    setTimeout(() => toast.success("일정이 저장되었습니다!"), 0);
+    toast.success("일정이 저장되었습니다!");
   };
 
   return (

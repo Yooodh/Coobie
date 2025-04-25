@@ -113,22 +113,43 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
       {/* 이번주로 버튼 */}
       <button
         onClick={handleGoToThisWeek}
-        className="absolute right-44 top-0 z-20 bg-gray-200 text-gray-800 rounded px-4 py-2"
+        className="fixed right-8 bottom-24 z-50 bg-gray-200 text-gray-800 rounded px-4 py-2 shadow"
       >
-        이번주로
+        이번주
       </button>
       {/* 좌우 화살표 */}
+      {/* 이전 주 버튼 */}
       <button
-        onClick={handlePrev}
-        className="fixed left-0 top-1/2 -translate-y-1/2 z-10  bg-red-100 text-red-600 rounded-full w-10 h-10 flex items-center justify-center shadow"
+        aria-label="이전 주"
+        onClick={handlePrev} // ← 실제 함수로 교체
+        className="fixed left-8 top-1/2 bottom-24 z-50 flex items-center justify-center w-10 h-10 rounded-full bg-white shadow hover:bg-blue-100 hover:scale-110 transition-all duration-150 focus:outline-none"
       >
-        {"<"}
+        <svg
+          width="24"
+          height="24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
       </button>
+
+      {/* 다음 주 버튼 */}
       <button
-        onClick={handleNext}
-        className="fixed right-0 top-1/2 -translate-y-1/2 z-10 bg-blue-100 text-blue-600 rounded-full w-10 h-10 flex items-center justify-center shadow"
+        aria-label="다음 주"
+        onClick={handleNext} // ← 실제 함수로 교체
+        className="fixed right-8 top-1/2 z-50 flex items-center justify-center w-10 h-10 rounded-full bg-white shadow hover:bg-blue-100 hover:scale-110 transition-all duration-150 focus:outline-none"
       >
-        {">"}
+        <svg
+          width="24"
+          height="24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <polyline points="9 6 15 12 9 18" />
+        </svg>
       </button>
       <Swiper
         ref={swiperRef}
@@ -141,7 +162,7 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
       >
         {weeks.map((weekDates, idx) => (
           <SwiperSlide key={idx}>
-            <div className="grid grid-cols-7 gap-px h-[640px] border border-gray-200 bg-gray-100 pointer-events-auto">
+            <div className="grid grid-cols-7 gap-px h-[647px] border border-gray-200 bg-gray-100 pointer-events-auto">
               {weekDates.map((date) => (
                 <Chart
                   key={date.toISOString()}

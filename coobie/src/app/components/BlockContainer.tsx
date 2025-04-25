@@ -5,12 +5,13 @@ import { BlockType } from "@/types/ScheduleType";
 
 interface BlockContainerProps {
   blocks: BlockType[];
-  date: string; // YYYY-MM-DD (변경)
+  date: string;
   startHour: number;
   onResizeBlock: (
     id: string,
     newDuration: number,
-    newStartTime?: number
+    newStartTime?: number,
+    expansionState?: 0 | 1 | 2
   ) => void;
   onDeleteBlock: (id: string) => void;
   onMoveBlock?: (id: string, date: string, startTime: number) => void;
@@ -24,7 +25,6 @@ const BlockContainer: React.FC<BlockContainerProps> = ({
   onDeleteBlock,
   onMoveBlock,
 }) => {
-  // 날짜(date) 기준으로 필터링
   const dayBlocks = blocks.filter((block) => block.date === date);
 
   return (
@@ -33,6 +33,7 @@ const BlockContainer: React.FC<BlockContainerProps> = ({
         <Block
           key={block.id}
           block={block}
+          blocks={blocks} // blocks prop 전달 추가
           startHour={startHour}
           onResize={onResizeBlock}
           onDelete={onDeleteBlock}

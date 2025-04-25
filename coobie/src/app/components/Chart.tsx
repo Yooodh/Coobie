@@ -1,8 +1,8 @@
 "use client";
-import React, { useRef, useEffect } from "react";
-import BlockContainer from "./BlockContainer";
+import React, { useRef } from "react";
 import { BlockType } from "@/types/ScheduleType";
 import { useDrop } from "react-dnd";
+import BlockContainer from "./BlockContainer";
 import { toast } from "react-toastify";
 
 interface ChartProps {
@@ -10,7 +10,8 @@ interface ChartProps {
   onResizeBlock: (
     id: string,
     newDuration: number,
-    newStartTime?: number
+    newStartTime?: number,
+    expansionState?: 0 | 1 | 2
   ) => void;
   onDeleteBlock: (id: string) => void;
   date: Date;
@@ -20,10 +21,14 @@ interface ChartProps {
     date: string,
     startTime: number
   ) => void;
-  onMoveBlock?: (id: string, date: string, startTime: number) => void;
+  onMoveBlock?: (
+    id: string,
+    date: string,
+    startTime: number,
+    duration?: number
+  ) => void;
 }
 
-// 겹침 감지 함수 간소화
 function isOverlapping(
   blocks: BlockType[],
   date: string,
@@ -51,32 +56,48 @@ const Chart: React.FC<ChartProps> = ({
 }) => {
   const dropRef = useRef<HTMLDivElement>(null);
 
-  const dateString = `${date.getFullYear()}-${String(
-    date.getMonth() + 1
-  ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-
-  // drop 함수를 미리 정의 (this.drop 오류 해결)
   const handleDrop = (item: any, monitor: any) => {
     const clientOffset = monitor.getClientOffset();
     if (!clientOffset || !dropRef.current) return;
 
+    const dateString = `${date.getFullYear()}-${String(
+      date.getMonth() + 1
+    ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+    const initialClientOffset = monitor.getInitialClientOffset();
+    const initialSourceClientOffset = monitor.getInitialSourceClientOffset();
+    const dragOffsetY =
+      initialClientOffset && initialSourceClientOffset
+        ? initialClientOffset.y - initialSourceClientOffset.y
+        : 0;
+
+    const blockTopPosition = clientOffset.y - dragOffsetY;
     const hoverBoundingRect = dropRef.current.getBoundingClientRect();
-    const hoverY = clientOffset.y - hoverBoundingRect.top;
+    const hoverY = blockTopPosition - hoverBoundingRect.top;
+
     const hourHeight = 60;
     const dropHour = Math.floor(hoverY / hourHeight);
-    const dropStartTime = Math.max(startHour, startHour + dropHour);
+    let dropStartTime = Math.max(startHour, startHour + dropHour);
 
-    // 겹침 체크 간소화
     let duration = 1;
     let exceptBlockId = undefined;
 
     if (item.duration) duration = item.duration;
     if (item.id) exceptBlockId = item.id;
 
-    // 겹침 체크 - 같은 날짜의 블록만 필터링
+    const chartEndHour = 19;
+
+    if (dropStartTime + duration > chartEndHour) {
+      dropStartTime = chartEndHour - duration;
+      if (dropStartTime < startHour) {
+        toast.error("차트에 공간이 부족해 이동할 수 없습니다!");
+        return;
+      }
+    }
+
     const sameDate = blocks.filter((block) => block.date === dateString);
     const overlap = isOverlapping(
-      sameDate, // 중요: 전체 blocks가 아닌 현재 날짜의 blocks만 체크
+      sameDate,
       dateString,
       dropStartTime,
       duration,
@@ -88,7 +109,6 @@ const Chart: React.FC<ChartProps> = ({
       return;
     }
 
-    // e.stopPropagation() 추가 - 이벤트 전파 방지
     if (item.type && ["휴가", "외근", "회의"].includes(item.type)) {
       onAddBlock?.(item.type, dateString, dropStartTime);
     } else if (item.id && onMoveBlock) {
@@ -98,7 +118,7 @@ const Chart: React.FC<ChartProps> = ({
 
   const [{ isOver }, drop] = useDrop({
     accept: ["block", "block-instance"],
-    drop: handleDrop, // 미리 정의한 함수 사용
+    drop: handleDrop,
     collect: (monitor) => ({
       isOver: !!monitor.isOver(),
     }),
@@ -119,6 +139,10 @@ const Chart: React.FC<ChartProps> = ({
     dropRef.current = el;
   };
 
+  const dateString = `${date.getFullYear()}-${String(
+    date.getMonth() + 1
+  ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
   return (
     <div
       className={`border border-gray-200 w-full h-full transition-colors duration-200 
@@ -127,11 +151,20 @@ const Chart: React.FC<ChartProps> = ({
       <div className="text-center p-2 border-b border-gray-200 text-lg font-medium text-gray-400">
         {formatDate(date)}
       </div>
-      <div ref={combineRefs} className="relative h-[620px] overflow-y-auto">
+      <div
+        ref={combineRefs}
+        className="relative overflow-hidden"
+        style={{ height: `${timeLabels.length * 60}px` }}
+      >
         {timeLabels.map((hour, index) => (
           <div
             key={hour}
-            className="absolute w-full h-[60px] border-t border-gray-200 flex items-center"
+            className={`absolute w-full h-[60px] border-t border-gray-200 flex items-center
+              ${
+                index === timeLabels.length - 1
+                  ? "border-b border-gray-200"
+                  : ""
+              }`}
             style={{ top: `${index * 60}px` }}
           >
             <span className="text-sm pl-2 text-gray-400">
