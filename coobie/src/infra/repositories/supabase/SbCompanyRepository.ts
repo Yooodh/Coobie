@@ -4,6 +4,20 @@ import { CompanyFilter } from "@/domain/repositories/filters/CompanyFilter";
 import { CompanyRepository } from "@/domain/repositories/CompanyRepository";
 import { createBrowserSupabaseClient } from "@/utils/supabase/client";
 
+interface CompanyDbInsert {
+  company_name: string;
+  is_locked: boolean;
+  user_id: string;
+  role_id: string;
+}
+
+interface CompanyDbUpdate {
+  company_name?: string;
+  is_locked?: boolean;
+  user_id?: string;
+  role_id?: string;
+}
+
 export class SbCompanyRepository implements CompanyRepository {
   async count(filter?: CompanyFilter): Promise<number> {
     const companies = await this.findAll(filter);
@@ -13,7 +27,7 @@ export class SbCompanyRepository implements CompanyRepository {
   async findAll(filter?: CompanyFilter): Promise<Company[]> {
     const supabase = await createBrowserSupabaseClient();
 
-    // 먼저 회사 데이터 가져오기 (조인 없이)
+    // 회사 데이터 가져오기
     let query = supabase.from("company").select("*").is("deleted_at", null);
 
     if (filter) {
@@ -59,7 +73,6 @@ export class SbCompanyRepository implements CompanyRepository {
       .map((company) => {
         const user = users.find((u) => u.ID === company.user_id) || {};
 
-        // 필터링 조건 적용
         if (
           filter?.isApproved !== undefined &&
           user.is_approved !== filter.isApproved
@@ -125,11 +138,10 @@ export class SbCompanyRepository implements CompanyRepository {
     } as unknown as Company;
   }
 
-
   async findByBusinessNumber(businessNumber: string): Promise<Company | null> {
     const supabase = await createBrowserSupabaseClient();
 
-    // 먼저 사업자번호로 사용자(관리자) 조회
+    // 사업자번호로 사용자(관리자) 조회
     const { data: userData, error: userError } = await supabase
       .from("user")
       .select("ID, role_id")
@@ -183,72 +195,39 @@ export class SbCompanyRepository implements CompanyRepository {
 
   async save(company: Company): Promise<Company> {
     const supabase = await createBrowserSupabaseClient();
-  
+
     // ID 필드를 명시적으로 제외하고 데이터 객체 생성
-    const companyData: any = {
+    const companyData: CompanyDbInsert = {
       company_name: company.companyName,
       is_locked: company.isLocked,
       user_id: company.userId,
-      role_id: company.roleId
+      role_id: company.roleId,
     };
-  
+
     const { data, error } = await supabase
       .from("company")
       .insert(companyData)
       .select()
       .single();
-  
+
     if (error) {
       throw new Error(`Failed to save company: ${error.message}`);
     }
-  
+
     return {
       id: data.ID,
       companyName: data.company_name,
       isLocked: data.is_locked,
       userId: data.user_id,
       roleId: data.role_id,
-      deletedAt: data.deleted_at ? new Date(data.deleted_at) : undefined
+      deletedAt: data.deleted_at ? new Date(data.deleted_at) : undefined,
     } as Company;
   }
 
-  // async update(company: Company): Promise<Company> {
-  //   const supabase = await createBrowserSupabaseClient();
-
-  //   const updates: any = {};
-
-  //   if (company.companyName !== undefined)
-  //     updates.company_name = company.companyName;
-  //   if (company.businessNumber !== undefined)
-  //     updates.business_number = company.businessNumber;
-  //   if (company.isLocked !== undefined) updates.is_locked = company.isLocked;
-
-  //   const { data, error } = await supabase
-  //     .from("company")
-  //     .update(updates)
-  //     .eq("ID", company.Id)
-  //     .select()
-  //     .single();
-
-  //   if (error) {
-  //     throw new Error(
-  //       `Failed to update company with id ${company.Id}: ${error.message}`
-  //     );
-  //   }
-
-  //   return {
-  //     id: data.ID,
-  //     companyName: data.company_name,
-  //     businessNumber: data.business_number,
-  //     isLocked: data.is_locked,
-  //     deletedAt: data.deleted_at ? new Date(data.deleted_at) : null,
-  //   } as unknown as Company;
-  // }
-  // SbCompanyRepository의 update 메서드 수정
   async update(company: Company): Promise<Company> {
     const supabase = await createBrowserSupabaseClient();
 
-    const updates: any = {};
+    const updates: CompanyDbUpdate = {};
 
     if (company.companyName !== undefined)
       updates.company_name = company.companyName;
@@ -310,46 +289,32 @@ export class SbCompanyRepository implements CompanyRepository {
     }
   }
 
-  // async updateApprovalStatus(id: string, isApproved: boolean): Promise<void> {
-  //   const supabase = await createBrowserSupabaseClient();
-
-  //   const { error } = await supabase
-  //     .from("company")
-  //     .update({ is_approved: isApproved })
-  //     .eq("ID", id);
-
-  //   if (error) {
-  //     throw new Error(
-  //       `Failed to update approval status for company with id ${id}: ${error.message}`
-  //     );
-  //   }
-  // }
   async updateApprovalStatus(id: string, isApproved: boolean): Promise<void> {
     const supabase = await createBrowserSupabaseClient();
-  
+
     // 1. 회사 정보를 가져옵니다
     const { data: companyData, error: companyError } = await supabase
       .from("company")
       .select("user_id")
       .eq("ID", id)
       .single();
-  
+
     if (companyError) {
       throw new Error(
         `회사 정보를 가져오는 중 오류 발생 (ID: ${id}): ${companyError.message}`
       );
     }
-  
+
     if (!companyData || !companyData.user_id) {
       throw new Error(`회사 관리자 정보를 찾을 수 없습니다 (회사 ID: ${id})`);
     }
-  
+
     // 2. 관리자 계정의 승인 상태를 업데이트합니다
     const { error: updateError } = await supabase
       .from("user")
       .update({ is_approved: isApproved })
       .eq("ID", companyData.user_id);
-  
+
     if (updateError) {
       throw new Error(
         `회사 관리자 승인 상태 업데이트 중 오류 발생 (사용자 ID: ${companyData.user_id}): ${updateError.message}`
@@ -360,27 +325,27 @@ export class SbCompanyRepository implements CompanyRepository {
   async resetPassword(id: string, defaultPassword: string): Promise<void> {
     try {
       const supabase = await createBrowserSupabaseClient();
-  
+
       // 회사 정보 조회 (user_id 컬럼을 이용하여 관리자 ID 직접 가져오기)
       const { data: companyData, error: companyError } = await supabase
         .from("company")
-        .select("user_id")  // business_number 대신 user_id 사용
+        .select("user_id")
         .eq("ID", id)
         .single();
-  
+
       if (companyError) {
         throw new Error(
           `회사 정보를 가져오는 중 오류 발생 (ID: ${id}): ${companyError.message}`
         );
       }
-  
+
       if (!companyData || !companyData.user_id) {
         throw new Error(`회사 관리자 정보를 찾을 수 없습니다 (회사 ID: ${id})`);
       }
-  
+
       // 관리자 ID를 직접 사용하여 비밀번호 초기화
       const adminId = companyData.user_id;
-      
+
       // 관리자 비밀번호 초기화 및 잠금 해제
       const { error: updateError } = await supabase
         .from("user")
@@ -390,7 +355,7 @@ export class SbCompanyRepository implements CompanyRepository {
           login_attempts: 0,
         })
         .eq("ID", adminId);
-  
+
       if (updateError) {
         throw new Error(
           `관리자 비밀번호 초기화 중 오류 발생 (ID: ${adminId}): ${updateError.message}`

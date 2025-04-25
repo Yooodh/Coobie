@@ -1,9 +1,10 @@
 import { Department } from "@/domain/entities/Department";
 import { DepartmentRepository } from "@/domain/repositories/DepartmentRepository";
 import { createBrowserSupabaseClient } from "@/utils/supabase/client";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 export class SbDepartmentRepository implements DepartmentRepository {
-  private supabase: any;
+  private supabase: SupabaseClient;
 
   constructor() {
     this.supabase = createBrowserSupabaseClient();
@@ -11,7 +12,7 @@ export class SbDepartmentRepository implements DepartmentRepository {
 
   async getAllByCompany(businessNumber: string): Promise<Department[]> {
     try {
-      console.log(`부서 조회 시작: businessNumber=${businessNumber}`);
+      console.log(`부서 조회 시작: bu sinessNumber=${businessNumber}`);
 
       // 1. business_number로 사용자(관리자) 찾기
       const { data: userData, error: userError } = await this.supabase
@@ -211,7 +212,9 @@ export class SbDepartmentRepository implements DepartmentRepository {
       }
 
       if (userCount && userCount > 0) {
-        throw new Error(`현재 ${userCount}명의 사용자가 이 부서에 소속되어 있어 삭제할 수 없습니다`);
+        throw new Error(
+          `현재 ${userCount}명의 사용자가 이 부서에 소속되어 있어 삭제할 수 없습니다`
+        );
       }
 
       // 소프트 삭제 방식 (deleted_at 필드 업데이트)

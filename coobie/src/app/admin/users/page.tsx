@@ -1,21 +1,29 @@
-// src/app/admin/users/page.tsx (수정)
 "use client";
 
 import { useState, useEffect } from "react";
-import { User } from "@/domain/entities/User";
-import { Department } from "@/domain/entities/Department";
-import { Position } from "@/domain/entities/Position";
 import SearchTabs from "@/app/components/admin/SearchTabs";
 import UserTable from "@/app/components/admin/UserTable";
 import UserModal from "@/app/components/admin/UserModal";
 import { LogoutUseCase } from "@/application/usecases/auth/LogoutUseCase";
-import { SbUserRepository } from "@/infra/repositories/supabase/SbUserRepository";
-import { UpdateUserUseCase } from "@/application/usecases/user/UpdateUserUseCase";
+import { AuthUserDto } from "@/application/usecases/auth/dto/AuthUserDto";
+import { UserListDto } from "@/application/usecases/user/dto/UserListDto";
+import { DepartmentDto } from "@/application/usecases/admin/dto/DepartmentDto";
+import { PositionDto } from "@/application/usecases/admin/dto/PositionDto";
+
+interface ApiError {
+  error: string;
+}
+
+interface UsersApiResponse {
+  users: UserListDto[];
+  total: number;
+  totalPages: number;
+}
 
 export default function UserManagementPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [positions, setPositions] = useState<Position[]>([]);
+  const [users, setUsers] = useState<UserListDto[]>([]);
+  const [departments, setDepartments] = useState<DepartmentDto[]>([]);
+  const [positions, setPositions] = useState<PositionDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -23,10 +31,10 @@ export default function UserManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchType, setSearchType] = useState("전체");
   const [loggingOut, setLoggingOut] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<AuthUserDto | null>(null);
   
   // 모달 관련 상태 추가
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserListDto | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // 현재 로그인한 사용자 정보 가져오기
@@ -88,12 +96,16 @@ export default function UserManagementPage() {
         throw new Error(`오류: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as UsersApiResponse;
       console.log("사용자 데이터:", data);
       setUsers(data.users);
       setTotalPages(data.totalPages);
-    } catch (err: any) {
-      setError(err.message || "사용자 목록을 불러오는데 실패했습니다");
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || "사용자 목록을 불러오는데 실패했습니다");
+      } else {
+        setError("사용자 목록을 불러오는데 실패했습니다");
+      }
     } finally {
       setLoading(false);
     }
@@ -110,21 +122,6 @@ export default function UserManagementPage() {
   // 부서 및 직급 정보 가져오기
   const fetchDepartmentsAndPositions = async () => {
     try {
-      // 사용자 정보 먼저 가져오기 (토큰 검증을 위해)
-      const userResponse = await fetch("/api/auth/me");
-
-      if (!userResponse.ok) {
-        console.error(
-          "사용자 정보를 가져오는데 실패했습니다:",
-          userResponse.status
-        );
-        return;
-      }
-
-      const userData = await userResponse.json();
-      console.log("현재 사용자 정보:", userData);
-      console.log("Business Number:", userData.user.businessNumber);
-
       // 부서 및 직급 정보 가져오기
       const [deptResponse, posResponse] = await Promise.all([
         fetch("/api/departments", {
@@ -140,15 +137,9 @@ export default function UserManagementPage() {
       ]);
 
       if (deptResponse.ok) {
-        const deptData = await deptResponse.json();
+        const deptData = await deptResponse.json() as DepartmentDto[];
         console.log("부서 데이터:", deptData);
-
-        // 데이터 형식 확인 및 변환
-        if (Array.isArray(deptData)) {
-          setDepartments(deptData);
-        } else {
-          console.error("부서 데이터 형식이 잘못되었습니다:", deptData);
-        }
+        setDepartments(deptData);
       } else {
         console.error(
           "부서 정보를 가져오는데 실패했습니다:",
@@ -157,15 +148,9 @@ export default function UserManagementPage() {
       }
 
       if (posResponse.ok) {
-        const posData = await posResponse.json();
+        const posData = await posResponse.json() as PositionDto[];
         console.log("직급 데이터:", posData);
-
-        // 데이터 형식 확인 및 변환
-        if (Array.isArray(posData)) {
-          setPositions(posData);
-        } else {
-          console.error("직급 데이터 형식이 잘못되었습니다:", posData);
-        }
+        setPositions(posData);
       } else {
         console.error(
           "직급 정보를 가져오는데 실패했습니다:",
@@ -195,13 +180,18 @@ export default function UserManagementPage() {
         });
 
         if (!response.ok) {
-          throw new Error(`오류: ${response.status}`);
+          const errorData = await response.json() as ApiError;
+          throw new Error(errorData.error || `오류: ${response.status}`);
         }
 
         alert("비밀번호가 성공적으로 초기화되었습니다");
         fetchUsers(); // 목록 새로고침
-      } catch (err: any) {
-        alert(`비밀번호 초기화 실패: ${err.message}`);
+      } catch (err) {
+        if (err instanceof Error) {
+          alert(`비밀번호 초기화 실패: ${err.message}`);
+        } else {
+          alert("비밀번호 초기화 실패");
+        }
       }
     }
   };
@@ -222,13 +212,18 @@ export default function UserManagementPage() {
         });
 
         if (!response.ok) {
-          throw new Error(`오류: ${response.status}`);
+          const errorData = await response.json() as ApiError;
+          throw new Error(errorData.error || `오류: ${response.status}`);
         }
 
         alert("사용자 계정이 잠금 설정되었습니다");
         fetchUsers(); // 목록 새로고침
-      } catch (err: any) {
-        alert(`잠금 상태 변경 실패: ${err.message}`);
+      } catch (err) {
+        if (err instanceof Error) {
+          alert(`잠금 상태 변경 실패: ${err.message}`);
+        } else {
+          alert("잠금 상태 변경 실패");
+        }
       }
     }
   };
@@ -245,19 +240,24 @@ export default function UserManagementPage() {
         });
 
         if (!response.ok) {
-          throw new Error(`오류: ${response.status}`);
+          const errorData = await response.json() as ApiError;
+          throw new Error(errorData.error || `오류: ${response.status}`);
         }
 
         alert("사용자가 성공적으로 삭제되었습니다");
         fetchUsers(); // 목록 새로고침
-      } catch (err: any) {
-        alert(`사용자 삭제 실패: ${err.message}`);
+      } catch (err) {
+        if (err instanceof Error) {
+          alert(`사용자 삭제 실패: ${err.message}`);
+        } else {
+          alert("사용자 삭제 실패");
+        }
       }
     }
   };
 
   // 모달 관련 함수 추가
-  const handleEditUser = (user: User) => {
+  const handleEditUser = (user: UserListDto) => {
     setSelectedUser(user);
     setIsModalOpen(true);
   };
@@ -267,40 +267,53 @@ export default function UserManagementPage() {
     setIsModalOpen(false);
   };
 
-  const handleSaveUser = async (updatedUser: Partial<User>) => {
+  interface UpdatedUserData {
+    username?: string;
+    nickname?: string;
+    departmentId?: number | null;
+    positionId?: number | null;
+    isLocked?: boolean;
+    isApproved?: boolean;
+    notificationOn?: boolean;
+  }
+
+  const handleSaveUser = async (updatedUser: Partial<UserListDto>) => {
     if (!selectedUser) return;
 
     try {
-      const userRepository = new SbUserRepository();
-      const updateUserUseCase = new UpdateUserUseCase(userRepository);
-      
-      // useCase를 직접 호출하는 방법 대신 API 호출 방식으로 변경
+      // API 호출 데이터 준비
+      const userData: UpdatedUserData = {
+        username: updatedUser.username,
+        nickname: updatedUser.nickname,
+        departmentId: updatedUser.departmentId !== undefined ? updatedUser.departmentId : null,
+        positionId: updatedUser.positionId !== undefined ? updatedUser.positionId : null,
+        isLocked: updatedUser.isLocked,
+        isApproved: updatedUser.isApproved,
+        notificationOn: updatedUser.notificationOn
+      };
+
+      // API 호출
       const response = await fetch(`/api/users/${selectedUser.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...updatedUser,
-          // 숫자 타입 처리
-          departmentId: updatedUser.departmentId !== undefined 
-            ? Number(updatedUser.departmentId) 
-            : undefined,
-          positionId: updatedUser.positionId !== undefined 
-            ? Number(updatedUser.positionId) 
-            : undefined,
-        }),
+        body: JSON.stringify(userData),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json() as ApiError;
         throw new Error(errorData.error || `오류: ${response.status}`);
       }
 
       alert("사용자 정보가 성공적으로 업데이트되었습니다");
       fetchUsers(); // 목록 새로고침
-    } catch (err: any) {
-      throw new Error(err.message || "사용자 정보 업데이트에 실패했습니다");
+    } catch (err) {
+      if (err instanceof Error) {
+        throw new Error(err.message || "사용자 정보 업데이트에 실패했습니다");
+      } else {
+        throw new Error("사용자 정보 업데이트에 실패했습니다");
+      }
     }
   };
 
@@ -315,8 +328,12 @@ export default function UserManagementPage() {
           // 클라이언트 측 라우팅 (useRouter 사용)
           window.location.href = "/"; // 리다이렉션을 window.location으로 변경
         }
-      } catch (err: any) {
-        setError(err.message || "로그아웃 중 오류가 발생했습니다");
+      } catch (err) {
+        if (err instanceof Error) {
+          setError(err.message || "로그아웃 중 오류가 발생했습니다");
+        } else {
+          setError("로그아웃 중 오류가 발생했습니다");
+        }
       } finally {
         setLoggingOut(false);
       }
@@ -421,14 +438,16 @@ export default function UserManagementPage() {
       </div>
 
       {/* 사용자 정보 수정 모달 */}
-      <UserModal
-        user={selectedUser}
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onSave={handleSaveUser}
-        departments={departments}
-        positions={positions}
-      />
+      {selectedUser && (
+        <UserModal
+          user={selectedUser}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          onSave={handleSaveUser}
+          departments={departments}
+          positions={positions}
+        />
+      )}
     </div>
   );
 }

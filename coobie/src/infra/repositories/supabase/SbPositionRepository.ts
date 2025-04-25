@@ -1,9 +1,10 @@
 import { Position } from "@/domain/entities/Position";
 import { PositionRepository } from "@/domain/repositories/PositionRepository";
 import { createBrowserSupabaseClient } from "@/utils/supabase/client";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 export class SbPositionRepository implements PositionRepository {
-  private supabase: any;
+  private supabase: SupabaseClient;
 
   constructor() {
     this.supabase = createBrowserSupabaseClient();
@@ -213,7 +214,9 @@ export class SbPositionRepository implements PositionRepository {
       }
 
       if (userCount && userCount > 0) {
-        throw new Error(`현재 ${userCount}명의 사용자가 이 직급을 사용하고 있어 삭제할 수 없습니다`);
+        throw new Error(
+          `현재 ${userCount}명의 사용자가 이 직급을 사용하고 있어 삭제할 수 없습니다`
+        );
       }
 
       // 소프트 삭제 방식 (deleted_at 필드 업데이트)

@@ -5,6 +5,18 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CompanyDto } from "@/application/usecases/company/dto/CompanyDto";
 
+interface ApiResponse<T> {
+  message?: string;
+  error?: string;
+  data?: T;
+}
+
+interface CompaniesResponse {
+  companies: CompanyDto[];
+  total: number;
+  totalPages: number;
+}
+
 export default function RootDashboard() {
   const router = useRouter();
   const [pendingCompanies, setPendingCompanies] = useState<CompanyDto[]>([]);
@@ -28,14 +40,18 @@ export default function RootDashboard() {
         throw new Error("데이터를 불러오는데 실패했습니다");
       }
 
-      const pendingData = await pendingResponse.json();
-      const approvedData = await approvedResponse.json();
+      const pendingData = await pendingResponse.json() as CompaniesResponse;
+      const approvedData = await approvedResponse.json() as CompaniesResponse;
 
       setPendingCompanies(pendingData.companies || []);
       setApprovedCompanies(approvedData.companies || []);
       setError(null);
-    } catch (err: any) {
-      setError(err.message || "데이터를 불러오는 중 오류가 발생했습니다");
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || "데이터를 불러오는 중 오류가 발생했습니다");
+      } else {
+        setError("데이터를 불러오는 중 오류가 발생했습니다");
+      }
     } finally {
       setLoading(false);
     }
@@ -53,7 +69,7 @@ export default function RootDashboard() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json() as ApiResponse<null>;
         throw new Error(errorData.error || "회사 승인에 실패했습니다");
       }
 
@@ -72,8 +88,12 @@ export default function RootDashboard() {
       }
 
       alert("회사가 성공적으로 승인되었습니다");
-    } catch (err: any) {
-      alert(err.message || "회사 승인 중 오류가 발생했습니다");
+    } catch (err) {
+      if (err instanceof Error) {
+        alert(err.message || "회사 승인 중 오류가 발생했습니다");
+      } else {
+        alert("회사 승인 중 오류가 발생했습니다");
+      }
     }
   };
 
@@ -86,7 +106,7 @@ export default function RootDashboard() {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json() as ApiResponse<null>;
           throw new Error(errorData.error || "회사 가입 거절에 실패했습니다");
         }
 
@@ -96,8 +116,12 @@ export default function RootDashboard() {
         );
 
         alert("회사 가입 신청이 거절되었습니다");
-      } catch (err: any) {
-        alert(err.message || "회사 가입 거절 중 오류가 발생했습니다");
+      } catch (err) {
+        if (err instanceof Error) {
+          alert(err.message || "회사 가입 거절 중 오류가 발생했습니다");
+        } else {
+          alert("회사 가입 거절 중 오류가 발생했습니다");
+        }
       }
     }
   };
@@ -110,7 +134,7 @@ export default function RootDashboard() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json() as ApiResponse<null>;
         throw new Error(
           errorData.error || "회사 계정 잠금 해제에 실패했습니다"
         );
@@ -124,8 +148,12 @@ export default function RootDashboard() {
       );
 
       alert("회사 계정이 잠금 해제되었고 비밀번호가 초기화되었습니다");
-    } catch (err: any) {
-      alert(err.message || "회사 계정 잠금 해제 중 오류가 발생했습니다");
+    } catch (err) {
+      if (err instanceof Error) {
+        alert(err.message || "회사 계정 잠금 해제 중 오류가 발생했습니다");
+      } else {
+        alert("회사 계정 잠금 해제 중 오류가 발생했습니다");
+      }
     }
   };
 
@@ -140,7 +168,7 @@ export default function RootDashboard() {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json() as ApiResponse<null>;
           throw new Error(errorData.error || "회사 삭제에 실패했습니다");
         }
 
@@ -150,17 +178,21 @@ export default function RootDashboard() {
         );
 
         alert("회사가 성공적으로 삭제되었습니다");
-      } catch (err: any) {
-        alert(err.message || "회사 삭제 중 오류가 발생했습니다");
+      } catch (err) {
+        if (err instanceof Error) {
+          alert(err.message || "회사 삭제 중 오류가 발생했습니다");
+        } else {
+          alert("회사 삭제 중 오류가 발생했습니다");
+        }
       }
     }
   };
 
   // 관리자 비밀번호 초기화
-  const handleResetPassword = async (comapnyId: string) => {
+  const handleResetPassword = async (companyId: string) => {
     try {
       const response = await fetch(
-        `/api/companies/${comapnyId}/reset-password`,
+        `/api/companies/${companyId}/reset-password`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -169,15 +201,19 @@ export default function RootDashboard() {
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json() as ApiResponse<null>;
         throw new Error(errorData.error || `오류 ${response.status}`);
       }
 
       alert("회사 관리자 계정의 비밀번호가 초기화되었습니다");
-    } catch (err: any) {
-      alert(
-        err.message || "회사 관리자 비밀번호 초기화 중 오류가 발생했습니다."
-      );
+    } catch (err) {
+      if (err instanceof Error) {
+        alert(
+          err.message || "회사 관리자 비밀번호 초기화 중 오류가 발생했습니다."
+        );
+      } else {
+        alert("회사 관리자 비밀번호 초기화 중 오류가 발생했습니다.");
+      }
     }
   };
 
