@@ -170,7 +170,7 @@ export default function RootDashboard() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || `오류 ${response.statusa}`);
+        throw new Error(errorData.error || `오류 ${response.status}`);
       }
 
       alert("회사 관리자 계정의 비밀번호가 초기화되었습니다");
@@ -276,7 +276,12 @@ export default function RootDashboard() {
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }`}
                 >
-                  회사 관리
+                    회사 관리
+                    {approvedCompanies.length > 0 && (
+                    <span className="ml-2 bg-amber-100 text-amber-800 py-0.5 px-2 rounded-full text-xs">
+                      {approvedCompanies.length}
+                    </span>
+                  )}
                 </button>
               </nav>
             </div>
