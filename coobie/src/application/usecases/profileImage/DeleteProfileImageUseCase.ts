@@ -21,7 +21,7 @@ export class DeleteProfileImageUseCase {
       }
 
       // 프로필 이미지 삭제
-      await this.profileImageRepository.delete(existingImage.id);
+      await this.profileImageRepository.delete(existingImage.id!);
 
       return {
         success: true,

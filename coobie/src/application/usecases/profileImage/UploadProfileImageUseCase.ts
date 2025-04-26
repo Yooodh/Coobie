@@ -55,7 +55,6 @@ export class UploadProfileImageUseCase {
       if (existingImage) {
         // 기존 이미지가 있다면 업데이트
         profileImage = new ProfileImage(
-          existingImage.id,
           userId,
           uploadResult.fileName,
           uploadResult.filePath,
@@ -63,14 +62,14 @@ export class UploadProfileImageUseCase {
           uploadResult.fileType,
           uploadResult.fileSize,
           existingImage.createdAt,
-          new Date()
+          new Date(),
+          existingImage.id
         );
 
         await this.profileImageRepository.update(profileImage);
       } else {
         // 새 이미지 생성
         profileImage = new ProfileImage(
-          "", // ID는 저장 시 자동 생성됨
           userId,
           uploadResult.fileName,
           uploadResult.filePath,

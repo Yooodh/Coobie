@@ -1,4 +1,3 @@
-// src/app/components/common/ProfileImageUpload.tsx
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
@@ -20,9 +19,11 @@ export default function ProfileImageUpload({
   onImageChange,
   className = "",
   size = 150,
-  disabled = false
+  disabled = false,
 }: ProfileImageUploadProps) {
-  const [image, setImage] = useState<ProfileImageDto | null>(initialImage || null);
+  const [image, setImage] = useState<ProfileImageDto | null>(
+    initialImage || null
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -31,24 +32,35 @@ export default function ProfileImageUpload({
     if (!initialImage && userId) {
       fetchProfileImage();
     }
-  }, [userId]);
+  }, [userId, initialImage]);
 
   const fetchProfileImage = async () => {
     try {
-      const response = await fetch(`/api/profile-image?userId=${userId}`);
+      setLoading(true);
+      const response = await fetch(`/api/users/profile-image?userId=${userId}`);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "이미지를 불러오는데 실패했습니다");
+      }
+
       const data = await response.json();
-      
-      if (response.ok && data.profileImage) {
+
+      if (data.success && data.profileImage) {
         setImage(data.profileImage);
         onImageChange?.(data.profileImage);
       }
     } catch (err) {
       console.error("프로필 이미지 로딩 중 오류 발생:", err);
+      // 오류가 발생해도 이미지를 가져오지 못하는 것은 일반적인 상황일 수 있으므로
+      // 사용자 오류 메시지는 표시하지 않습니다
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleImageClick = () => {
-    if (!disabled) {
+    if (!disabled && !loading) {
       fileInputRef.current?.click();
     }
   };
@@ -64,21 +76,26 @@ export default function ProfileImageUpload({
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch("/api/profile-image", {
+      const response = await fetch("/api/users/profile-image", {
         method: "POST",
         body: formData,
       });
 
       const data = await response.json();
+      console.log(data)
 
-      if (!response.ok) {
+      if (!response.ok || !data.success) {
         throw new Error(data.error || "이미지 업로드 중 오류가 발생했습니다");
       }
 
       setImage(data.profileImage);
       onImageChange?.(data.profileImage);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "이미지 업로드 중 오류가 발생했습니다");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "이미지 업로드 중 오류가 발생했습니다"
+      );
       console.error("이미지 업로드 중 오류:", err);
     } finally {
       setLoading(false);
@@ -90,7 +107,7 @@ export default function ProfileImageUpload({
   };
 
   const handleDelete = async () => {
-    if (!image || disabled) return;
+    if (!image || disabled || loading) return;
 
     if (!confirm("정말 프로필 이미지를 삭제하시겠습니까?")) {
       return;
@@ -106,14 +123,18 @@ export default function ProfileImageUpload({
 
       const data = await response.json();
 
-      if (!response.ok) {
+      if (!response.ok || !data.success) {
         throw new Error(data.error || "이미지 삭제 중 오류가 발생했습니다");
       }
 
       setImage(null);
       onImageChange?.(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "이미지 삭제 중 오류가 발생했습니다");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "이미지 삭제 중 오류가 발생했습니다"
+      );
       console.error("이미지 삭제 중 오류:", err);
     } finally {
       setLoading(false);
@@ -123,7 +144,7 @@ export default function ProfileImageUpload({
   return (
     <div className={`relative ${className}`}>
       <div
-        className={`relative rounded-full overflow-hidden bg-gray-200 flex items-center justify-center cursor-pointer transition-opacity ${
+        className={`relative rounded-full overflow-hidden bg-gray-200 flex items-center justify-center cursor-pointer transition-all ${
           loading ? "opacity-50" : ""
         } ${disabled ? "cursor-default" : "hover:opacity-80"}`}
         style={{ width: `${size}px`, height: `${size}px` }}
@@ -141,7 +162,7 @@ export default function ProfileImageUpload({
           <div className="text-gray-400 flex items-center justify-center h-full w-full">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className={`h-${Math.floor(size/3)} w-${Math.floor(size/3)}`}
+              className="h-12 w-12"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -200,9 +221,7 @@ export default function ProfileImageUpload({
         </>
       )}
 
-      {error && (
-        <div className="mt-2 text-sm text-red-600">{error}</div>
-      )}
+      {error && <div className="mt-2 text-sm text-red-600">{error}</div>}
     </div>
   );
 }

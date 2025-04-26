@@ -1,9 +1,4 @@
-// export class ProfileImage {
-//   constructor(public userId: string, public fileName: string) {}
-// }
-
 // src/domain/entities/ProfileImage.ts
-
 export class ProfileImage {
   constructor(
     public userId: string,
@@ -14,7 +9,7 @@ export class ProfileImage {
     public fileSize: number,
     public createdAt: Date = new Date(),
     public updatedAt?: Date,
-    public id?: string,
+    public id?: string
   ) {}
 
   /**

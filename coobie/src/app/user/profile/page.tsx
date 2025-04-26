@@ -4,7 +4,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/app/components/common/Header";
-import ProfileImageUpload from "@/app/components/user/ProfileImageUpload";
+// import ProfileImageUpload from "@/app/components/user/ProfileImageUpload";
+import ProfileImageUpload from "@/app/components/common/ProfileImageUpload";
 import { UserDto } from "@/application/usecases/user/dto/UserDto";
 
 export default function UserProfile() {
