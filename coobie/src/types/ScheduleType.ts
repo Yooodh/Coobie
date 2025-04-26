@@ -10,6 +10,7 @@ export interface BlockType {
 
 export interface ProfileType {
   name: string;
+  nickname?: string;
   position: string;
   department: string;
   avatar: string;

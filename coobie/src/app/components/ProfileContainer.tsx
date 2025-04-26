@@ -34,7 +34,9 @@ const ProfileContainer: React.FC<ProfileContainerProps> = ({ profile }) => {
         }}
       /> */}
       <div>
-        <h2 className="text-2xl font-bold">{profile.name}</h2>
+        <h2 className="text-2xl font-bold">
+          {profile.nickname || profile.name}
+        </h2>
 
         <p className="text-gray-600">
           소속: {profile.department || "정보 없음"}

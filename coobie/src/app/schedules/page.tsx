@@ -71,6 +71,7 @@ export default function SchedulesPage() {
         // 프로필 데이터 설정
         setProfile({
           name: user.name || user.username || user.nickname,
+          nickname: user.nickname,
           position: getPositionName(user.positionId),
           department: getDepartmentName(user.departmentId),
           avatar: user.avatarUrl || "/default-avatar.png",
