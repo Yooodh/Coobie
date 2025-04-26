@@ -11,6 +11,6 @@ export interface BlockType {
 export interface ProfileType {
   name: string;
   position: string;
-  deaprtment: string;
+  department: string;
   avatar: string;
 }
