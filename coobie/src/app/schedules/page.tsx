@@ -6,6 +6,8 @@ import DraggableBlock from "@/app/components/DraggableBlock";
 import { BlockType, ProfileType } from "@/types/ScheduleType";
 import { ToastContainer, toast } from "react-toastify";
 import { convertBlockToDto } from "@/application/usecases/schedule/dto/scheduleDtoConverter";
+import { convertScheduleToBlock } from "@/application/usecases/schedule/dto/scheduleDtoConverter";
+import { FetchSchedulesDto } from "@/application/usecases/schedule/dto/FetchSchedulesDto";
 import "react-toastify/dist/ReactToastify.css";
 
 // 날짜를 'YYYY-MM-DD' 포맷으로 통일하는 함수
@@ -22,13 +24,60 @@ export default function SchedulesPage() {
   const [startHour] = useState(9);
 
   // 전체 블록 리스트
-  const [blocks, setBlocks] = useState<BlockType[]>([]);
+  // 1. 로컬 스토리지에서 초기 상태 불러오기
+  const [blocks, setBlocks] = useState<BlockType[]>(() => {
+    if (typeof window === "undefined") return [];
+    const saved = localStorage.getItem("scheduleBlocks");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // 2. blocks 상태가 변경될 때마다 로컬 스토리지에 저장
+  useEffect(() => {
+    localStorage.setItem("scheduleBlocks", JSON.stringify(blocks));
+  }, [blocks]);
+
+  // 삭제할 블록 ID 목록 (저장 시 DB에서 삭제)
+  const [blocksToDelete, setBlocksToDelete] = useState<number[]>([]);
 
   // 사용자 프로필
   const [profile, setProfile] = useState<ProfileType | null>(null);
 
   // 데이터 로딩 상태
   const [loading, setLoading] = useState(true);
+
+  console.log("[fetchScheduleData] 시작");
+  // 스케줄 데이터 조회 함수
+  const fetchScheduleData = async () => {
+    try {
+      console.log("[fetchScheduleData] 시작");
+      console.log("최신 스케줄 데이터 불러오기 시작");
+      const scheduleRes = await fetch("/api/schedules", {
+        cache: "no-store",
+      });
+
+      if (!scheduleRes.ok) throw new Error("일정 데이터 조회 실패");
+      const data = await scheduleRes.json();
+
+      // 로깅 추가
+      console.log("서버에서 받은 원본 데이터:", data.blocks[0]);
+
+      // 서버 데이터를 UI 형식으로 변환
+      let fetchedBlocks: BlockType[] = [];
+      if (data?.blocks && Array.isArray(data.blocks)) {
+        fetchedBlocks = (data.blocks as FetchSchedulesDto[])
+          .filter((schedule) => !schedule.deletedAt)
+          .map((schedule) => convertScheduleToBlock(schedule));
+      }
+
+      // 로깅 추가
+      console.log("변환된 블록 데이터:", fetchedBlocks[0]);
+
+      setBlocks(fetchedBlocks);
+    } catch (e) {
+      console.error("데이터 불러오기 오류:", e);
+      toast.error("최신 일정 불러오기 실패!");
+    }
+  };
 
   // 프로필 및 스케줄 데이터 불러오기
   useEffect(() => {
@@ -40,9 +89,7 @@ export default function SchedulesPage() {
           fetch("/api/departments"),
           fetch("/api/positions"),
         ]);
-
         if (!profileRes.ok) throw new Error("Profile fetch failed");
-
         const { user } = await profileRes.json();
 
         // 부서와 직급 데이터 파싱
@@ -75,7 +122,7 @@ export default function SchedulesPage() {
 
         // 프로필 데이터 설정
         setProfile({
-          id: user.id, // 추가
+          id: user.id,
           name: user.name || user.username || user.nickname,
           nickname: user.nickname,
           position: getPositionName(user.positionId),
@@ -83,22 +130,28 @@ export default function SchedulesPage() {
           avatar: user.avatarUrl || "/default-avatar.png",
         });
 
-        // 스케줄 데이터 가져오기
+        // 서버에서 데이터 가져오기
         const scheduleRes = await fetch("/api/schedules");
-        if (!scheduleRes.ok) throw new Error("Schedule fetch failed");
 
-        const data = await scheduleRes.json();
-        const fetchedBlocks = data?.blocks || [];
+        if (scheduleRes.ok) {
+          const data = await scheduleRes.json();
+          const serverBlocks = data?.blocks || [];
 
-        setBlocks(Array.isArray(fetchedBlocks) ? fetchedBlocks : []);
+          // 서버 데이터로 상태 업데이트 (UTC→KST 변환 포함)
+          setBlocks(
+            Array.isArray(serverBlocks)
+              ? serverBlocks.map((schedule) => convertScheduleToBlock(schedule))
+              : []
+          );
+        }
       } catch (e) {
         toast.error("데이터 불러오기 실패!");
         console.error("데이터 불러오기 오류:", e);
+        console.error("서버 데이터 불러오기 실패:", e);
       } finally {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
@@ -108,11 +161,10 @@ export default function SchedulesPage() {
     date: string,
     startTime: number
   ) => {
-    const duration = type === "회의" ? 1 : 2; // 회의는 1시간, 나머지는 2시간
-    const endTime = startTime + duration;
-
-    // 허용 시간 범위(9~19시) 체크
-    if (startTime < startHour || endTime > 19) {
+    const duration = 2;
+    const endTime = startTime + duration - 1;
+    // 차트 범위: 9~19시
+    if (startTime < 9 || endTime > 19) {
       toast.error("허용된 시간 범위를 벗어났습니다!");
       return;
     }
@@ -149,13 +201,7 @@ export default function SchedulesPage() {
     };
 
     setBlocks((prev) => [...prev, newBlock]);
-    toast.success("일정이 추가되었습니다!");
-
-    // 블럭의 상태 점검 로그
-    const updatedBlocks = [...blocks, newBlock]; // 현재 blocks 상태 사용
-    // setBlocks(updatedBlocks);
-    console.log("블럭 추가됨:", newBlock);
-    console.log("현재 블럭 상태:", updatedBlocks);
+    toast.success("일정이 추가되었습니다. 저장 버튼을 눌러 완료하세요.");
   };
 
   // 블록 리사이즈 함수 (크기 조정)
@@ -254,11 +300,20 @@ export default function SchedulesPage() {
 
   // 블록 삭제 함수
   const handleDeleteBlock = (id: number) => {
+    // UI에서 블록 제거
     setBlocks((prevBlocks) => prevBlocks.filter((block) => block.id !== id));
-    toast.info("일정이 삭제되었습니다!");
+
+    // DB에 저장된 블록만 삭제 대기 목록에 추가
+    if (id < 1_000_000_000_000) {
+      setBlocksToDelete((prev) => [...prev, id]);
+      toast.info("일정이 삭제되었습니다. 저장 버튼을 눌러 완료하세요.");
+    } else {
+      // 로컬에서만 존재하던 블록은 그냥 UI에서만 제거
+      toast.info("추가했던 일정이 취소되었습니다.");
+    }
   };
 
-  // 스케줄 저장 함수
+  // 스케줄 저장 함수 - 수정된 부분
   const handleSave = async () => {
     try {
       if (!profile) {
@@ -266,29 +321,31 @@ export default function SchedulesPage() {
         return;
       }
 
-      // 신규 블록만 필터링 (id가 1조 이상이면 임시 id로 간주)
-      const newBlocks = blocks.filter((block) => block.id > 1_000_000_000_000);
-
-      // 신규 블럭만 DTO로 변환
-      const dtos = newBlocks.map((block) =>
-        convertBlockToDto(block, profile.id)
-      );
-      console.log("저장할 신규 DTO:", dtos);
-
-      if (dtos.length === 0) {
-        toast.info("저장할 새 일정이 없습니다.");
-        return;
+      // 1. 모든 블럭을 서버로 보냄 (신규+기존 모두)
+      const dtos = blocks.map((block) => convertBlockToDto(block, profile.id));
+      if (dtos.length > 0) {
+        const saveRes = await fetch("/api/schedules", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ schedules: dtos }),
+        });
+        if (!saveRes.ok) throw new Error("일정 저장 실패");
       }
 
-      // 서버 전송
-      const res = await fetch("/api/schedules", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ schedules: dtos }),
-      });
+      // 2. 삭제할 블럭 처리
+      if (blocksToDelete.length > 0) {
+        await Promise.all(
+          blocksToDelete.map((id) =>
+            fetch(`/api/schedules/${id}?userId=${profile.id}`, {
+              method: "DELETE",
+            })
+          )
+        );
+        setBlocksToDelete([]);
+      }
 
-      if (!res.ok) throw new Error(res.statusText);
-      toast.success("성공적으로 저장되었습니다!");
+      toast.success("일정이 저장되었습니다!");
+      await fetchScheduleData();
     } catch (error) {
       toast.error(
         "저장 실패: " +

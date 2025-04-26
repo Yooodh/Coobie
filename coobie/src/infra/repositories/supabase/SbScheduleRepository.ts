@@ -34,6 +34,7 @@ export class SbScheduleRepository implements ScheduleRepository {
       const { data, error } = await client
         .from(SbScheduleRepository.SCHEDULE_TABLE)
         .select("*")
+        .is("deleted_at", null) // 중요: 삭제되지 않은 항목만 가져오기
         .order("ID", { ascending: true });
 
       if (error) {
@@ -171,6 +172,8 @@ export class SbScheduleRepository implements ScheduleRepository {
   async createSchedule(schedule: Schedule): Promise<Schedule> {
     try {
       const client = await createBrowserSupabaseClient();
+
+      // upsert 대신 기본 insert 사용
       const { data, error } = await client
         .from(SbScheduleRepository.SCHEDULE_TABLE)
         .insert({
@@ -180,7 +183,6 @@ export class SbScheduleRepository implements ScheduleRepository {
           deleted_at: schedule.deletedAt,
           schedulecategory_id: schedule.scheduleCategoryId,
           ended_at: schedule.endedAt,
-          // category: schedule.category,
         })
         .select("*")
         .single();
@@ -202,7 +204,7 @@ export class SbScheduleRepository implements ScheduleRepository {
     try {
       const client = await createBrowserSupabaseClient();
 
-      // 해당 사용자의 스케줄인지 확인
+      // 삭제 전 스케줄 정보 조회 (반환용)
       const { data: existingSchedule, error: checkError } = await client
         .from(SbScheduleRepository.SCHEDULE_TABLE)
         .select("*")
@@ -216,21 +218,21 @@ export class SbScheduleRepository implements ScheduleRepository {
         );
       }
 
-      // soft delete 구현
-      const { data, error } = await client
+      // 하드 삭제 수행
+      const { error } = await client
         .from(SbScheduleRepository.SCHEDULE_TABLE)
-        .update({ deleted_at: new Date().toISOString() })
+        .delete() // update() 대신 delete() 사용
         .eq("ID", scheduleId)
-        .select("*")
-        .single();
+        .eq("user_id", userId);
 
-      if (error || !data) {
+      if (error) {
         throw new ScheduleRepositoryError(
           `스케줄 삭제 실패 (ID: ${scheduleId}): ${error?.message}`
         );
       }
 
-      return this.toSchedule(data);
+      // 삭제된 레코드 정보 반환
+      return this.toSchedule(existingSchedule);
     } catch (err) {
       throw new ScheduleRepositoryError(
         `스케줄 삭제 중 오류 발생: ${(err as Error).message}`
@@ -271,6 +273,38 @@ export class SbScheduleRepository implements ScheduleRepository {
     } catch (err) {
       throw new ScheduleRepositoryError(
         `스케줄 업데이트 중 오류 발생: ${(err as Error).message}`
+      );
+    }
+  }
+
+  async findByDateAndTime(
+    userId: string,
+    date: Date,
+    startedAt: Date
+  ): Promise<Schedule[]> {
+    try {
+      const client = await createBrowserSupabaseClient();
+
+      // Date 객체를 ISO 문자열로 변환
+      const dateStr = date.toISOString().split("T")[0];
+      const startTimeStr = startedAt.toISOString();
+
+      const { data, error } = await client
+        .from(SbScheduleRepository.SCHEDULE_TABLE)
+        .select("*")
+        .eq("user_id", userId)
+        .eq("date", dateStr)
+        .eq("started_at", startTimeStr)
+        .is("deleted_at", null); // 삭제되지 않은 항목만
+
+      if (error) {
+        throw new ScheduleRepositoryError(`일정 검색 실패: ${error.message}`);
+      }
+
+      return (data ?? []).map(this.toSchedule);
+    } catch (err) {
+      throw new ScheduleRepositoryError(
+        `일정 검색 중 오류 발생: ${(err as Error).message}`
       );
     }
   }

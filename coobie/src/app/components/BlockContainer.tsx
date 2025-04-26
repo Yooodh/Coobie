@@ -1,5 +1,4 @@
 "use client";
-
 import React from "react";
 import Block from "./Block";
 import { BlockType } from "@/types/ScheduleType";
@@ -27,10 +26,43 @@ const BlockContainer: React.FC<BlockContainerProps> = ({
   onDeleteBlock,
   onMoveBlock,
 }) => {
-  // 현재 날짜(date)에 해당하는 블록만 필터링
-  const dayBlocks = Array.isArray(blocks)
-    ? blocks.filter((block) => block.date === date)
-    : [];
+  const CHART_START = 9;
+  const CHART_END = 22;
+  const dayBlocks = blocks.filter((block) => {
+    // 날짜 형식 통일을 위해 포매팅
+    const blockDate = block.date.slice(0, 10);
+    const currentDate = date;
+
+    console.log(
+      "블록 날짜:",
+      blockDate,
+      "현재 날짜:",
+      currentDate,
+      "일치여부:",
+      blockDate === currentDate
+    );
+
+    if (blockDate !== currentDate) return false;
+
+    // 시간 범위 체크는 유지
+    const blockEnd = block.startTime + block.duration - 1;
+    const visible = block.startTime <= CHART_END && blockEnd >= CHART_START;
+
+    console.log(
+      "블록:",
+      block.id,
+      "표시여부:",
+      visible,
+      "시작시간:",
+      block.startTime,
+      "차트범위:",
+      CHART_START,
+      "-",
+      CHART_END
+    );
+
+    return visible;
+  });
 
   return (
     <div className="relative h-full w-full">

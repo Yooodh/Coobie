@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { SbScheduleRepository } from "@/infra/repositories/supabase/SbScheduleRepository";
 import { fetchSchedulesUseCase } from "@/application/usecases/schedule/FetchSchedulesUseCase";
 import { createScheduleUseCase } from "@/application/usecases/schedule/CreateScheduleUseCase";
+import { updateScheduleUseCase } from "@/application/usecases/schedule/UpdateScheduleUseCase";
+import { Schedule } from "@/domain/entities/Schedule";
 
 // GET: 전체 스케줄 조회
 export async function GET() {
@@ -10,7 +12,6 @@ export async function GET() {
     const schedules = await fetchSchedulesUseCase(repository);
     return NextResponse.json({ blocks: schedules }, { status: 200 });
   } catch (error) {
-    console.error("스케줄 조회 실패:", error);
     return NextResponse.json(
       { error: "스케줄 데이터 불러오기 실패" },
       { status: 500 }
@@ -18,7 +19,7 @@ export async function GET() {
   }
 }
 
-// POST: 다중 스케줄 생성
+// POST: 다중 스케줄 upsert (id 있으면 update, 없으면 insert)
 export async function POST(request: NextRequest) {
   try {
     const { schedules } = await request.json();
@@ -31,28 +32,46 @@ export async function POST(request: NextRequest) {
 
     const repository = new SbScheduleRepository();
 
-    // 유효성 검증 추가
     const validSchedules = schedules.map((dto) => ({
       ...dto,
-      // scheduleCategoryId가 없거나 null이면 기본값 1 사용
-      scheduleCategoryId: dto.scheduleCategoryId || 1,
+      scheduleCategoryId:
+        dto.scheduleCategoryId !== undefined && dto.scheduleCategoryId !== null
+          ? dto.scheduleCategoryId
+          : 1,
     }));
 
-    // 배열 처리 (병렬 처리)
-    const results = await Promise.all(
-      validSchedules.map(async (dto) => {
-        return createScheduleUseCase(repository, {
+    const results = [];
+    for (const dto of validSchedules) {
+      // id가 있으면 update, 없으면 insert
+      if (dto.id && dto.id < 1_000_000_000_000) {
+        const scheduleToUpdate = new Schedule(
+          dto.id,
+          dto.userId,
+          new Date(dto.startedAt),
+          new Date(dto.endedAt),
+          new Date(dto.date),
+          null,
+          dto.scheduleCategoryId
+        );
+        const result = await updateScheduleUseCase(
+          repository,
+          scheduleToUpdate
+        );
+        results.push(result);
+      } else {
+        const result = await createScheduleUseCase(repository, {
           userId: dto.userId,
           startedAt: new Date(dto.startedAt),
           endedAt: new Date(dto.endedAt),
           date: new Date(dto.date),
           scheduleCategoryId: dto.scheduleCategoryId,
         });
-      })
-    );
+        results.push(result);
+      }
+    }
+
     return NextResponse.json({ data: results }, { status: 201 });
   } catch (error) {
-    console.error("스케줄 생성 실패:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "알 수 없는 오류" },
       { status: 400 }
