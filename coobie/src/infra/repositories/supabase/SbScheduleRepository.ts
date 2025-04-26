@@ -2,14 +2,7 @@ import { createBrowserSupabaseClient } from "@/utils/supabase/client";
 import { ScheduleRepository } from "@/domain/repositories/ScheduleRepository";
 import { Schedule } from "@/domain/entities/Schedule";
 import { ScheduleCategory } from "@/domain/entities/ScheduleCategory";
-
-// 커스텀 에러 클래스
-export class ScheduleRepositoryError extends Error {
-  constructor(message: string) {
-    super(`[ScheduleRepository] ${message}`);
-    this.name = "ScheduleRepositoryError";
-  }
-}
+import { ScheduleRepositoryError } from "./ScheduleRepositoryError";
 
 export class SbScheduleRepository implements ScheduleRepository {
   // 테이블명 상수화
@@ -187,7 +180,7 @@ export class SbScheduleRepository implements ScheduleRepository {
           deleted_at: schedule.deletedAt,
           schedulecategory_id: schedule.scheduleCategoryId,
           ended_at: schedule.endedAt,
-          category: schedule.category,
+          // category: schedule.category,
         })
         .select("*")
         .single();
@@ -258,7 +251,7 @@ export class SbScheduleRepository implements ScheduleRepository {
         date: schedule.date.toISOString(),
         deleted_at: schedule.deletedAt?.toISOString() ?? null,
         schedulecategory_id: schedule.scheduleCategoryId,
-        category: schedule.category,
+        // category: schedule.category,
       };
 
       const { data, error } = await client
