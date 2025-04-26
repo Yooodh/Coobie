@@ -5,107 +5,119 @@ import { createBrowserSupabaseClient } from "@/utils/supabase/client";
 
 export class SbProfileImageRepository implements ProfileImageRepository {
   private readonly BUCKET_NAME = "profile-images";
-  private readonly BASE_PATH = "profiles";
+  private readonly PREFIX = "profiles";
 
   async uploadImage(userId: string, file: File): Promise<ProfileImage> {
     try {
       const supabase = createBrowserSupabaseClient();
       
-      // Generate a unique file name to prevent collisions
+      // 파일명 생성
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
-      const filePath = `${this.BASE_PATH}/${fileName}`;
+      const filePath = `${this.PREFIX}/${fileName}`;
       
-      // Upload file to Supabase Storage
-      const { data, error } = await supabase.storage
+      // 스토리지에 직접 업로드
+      const { error: uploadError } = await supabase.storage
         .from(this.BUCKET_NAME)
         .upload(filePath, file, {
           cacheControl: '3600',
           upsert: true,
         });
       
-      if (error) {
-        throw new Error(`Failed to upload profile image: ${error.message}`);
+      if (uploadError) {
+        throw new Error(`Failed to upload image: ${uploadError.message}`);
       }
       
-      // Save the reference in the profile_images table
-      const { data: profileData, error: profileError } = await supabase
-        .from('profile_images')
-        .upsert({
-          user_id: userId,
-          file_name: fileName,
-          updated_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
+      // 파일 URL 가져오기
+      const { data: urlData } = supabase.storage
+        .from(this.BUCKET_NAME)
+        .getPublicUrl(filePath);
       
-      if (profileError) {
-        // If there was an error saving to the database, delete the uploaded file
-        await supabase.storage.from(this.BUCKET_NAME).remove([filePath]);
-        throw new Error(`Failed to save profile image reference: ${profileError.message}`);
-      }
-      
-      return new ProfileImage(userId, fileName);
+      return new ProfileImage(
+        userId,
+        fileName,
+        filePath,
+        urlData.publicUrl,
+        file.type,
+        file.size
+      );
     } catch (error) {
       console.error("Error uploading profile image:", error);
       throw error;
     }
   }
-  
+
   async getByUserId(userId: string): Promise<ProfileImage | null> {
     try {
       const supabase = createBrowserSupabaseClient();
       
-      const { data, error } = await supabase
-        .from('profile_images')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+      // 사용자 ID로 시작하는 파일 목록 가져오기
+      const { data, error } = await supabase.storage
+        .from(this.BUCKET_NAME)
+        .list(this.PREFIX);
       
       if (error) {
-        // If the error is "No rows found", just return null
-        if (error.code === 'PGRST116') {
-          return null;
-        }
-        throw new Error(`Failed to get profile image: ${error.message}`);
+        throw new Error(`Failed to list profile images: ${error.message}`);
       }
       
-      if (!data) return null;
+      if (!data || data.length === 0) {
+        return null;
+      }
       
-      return new ProfileImage(data.user_id, data.file_name);
+      // 사용자 ID로 시작하는 파일 필터링
+      const userFiles = data.filter(file => file.name.startsWith(userId));
+      if (userFiles.length === 0) {
+        return null;
+      }
+      
+      // 최신 파일 (타임스탬프 기준)
+      const latestFile = userFiles.sort((a, b) => {
+        const timestampA = parseInt(a.name.split('-')[1]?.split('.')[0] || '0');
+        const timestampB = parseInt(b.name.split('-')[1]?.split('.')[0] || '0');
+        return timestampB - timestampA; // 내림차순
+      })[0];
+      
+      const filePath = `${this.PREFIX}/${latestFile.name}`;
+      const { data: urlData } = supabase.storage
+        .from(this.BUCKET_NAME)
+        .getPublicUrl(filePath);
+      
+      return new ProfileImage(
+        userId,
+        latestFile.name,
+        filePath,
+        urlData.publicUrl,
+        '', // 파일 타입 정보 없음
+        0   // 파일 크기 정보 없음
+      );
     } catch (error) {
       console.error("Error getting profile image:", error);
-      throw error;
+      return null; // 오류 발생 시 null 반환
     }
   }
-  
+
   async deleteImage(userId: string): Promise<void> {
     try {
       const supabase = createBrowserSupabaseClient();
       
-      // First, get the current profile image to know which file to delete
-      const profileImage = await this.getByUserId(userId);
+      // 사용자 ID로 시작하는 파일 목록 가져오기
+      const { data, error } = await supabase.storage
+        .from(this.BUCKET_NAME)
+        .list(this.PREFIX);
       
-      if (profileImage) {
-        // Delete the file from storage
-        const filePath = `${this.BASE_PATH}/${profileImage.fileName}`;
-        const { error: storageError } = await supabase.storage
-          .from(this.BUCKET_NAME)
-          .remove([filePath]);
-        
-        if (storageError) {
-          console.error(`Failed to delete image file: ${storageError.message}`);
-        }
+      if (error) {
+        throw new Error(`Failed to list profile images: ${error.message}`);
       }
       
-      // Delete the reference from the database (even if file deletion fails)
-      const { error: dbError } = await supabase
-        .from('profile_images')
-        .delete()
-        .eq('user_id', userId);
+      // 사용자 ID로 시작하는 모든 파일 삭제
+      const filesToDelete = data
+        .filter(file => file.name.startsWith(userId))
+        .map(file => `${this.PREFIX}/${file.name}`);
       
-      if (dbError) {
-        throw new Error(`Failed to delete profile image reference: ${dbError.message}`);
+      if (filesToDelete.length > 0) {
+        await supabase.storage
+          .from(this.BUCKET_NAME)
+          .remove(filesToDelete);
       }
     } catch (error) {
       console.error("Error deleting profile image:", error);
@@ -114,17 +126,10 @@ export class SbProfileImageRepository implements ProfileImageRepository {
   }
   
   getImageUrl(fileName: string): string {
-    try {
-      const supabase = createBrowserSupabaseClient();
-      
-      const { data } = supabase.storage
-        .from(this.BUCKET_NAME)
-        .getPublicUrl(`${this.BASE_PATH}/${fileName}`);
-      
-      return data.publicUrl;
-    } catch (error) {
-      console.error("Error getting profile image URL:", error);
-      throw error;
-    }
+    const supabase = createBrowserSupabaseClient();
+    const { data } = supabase.storage
+      .from(this.BUCKET_NAME)
+      .getPublicUrl(`${this.PREFIX}/${fileName}`);
+    return data.publicUrl;
   }
 }

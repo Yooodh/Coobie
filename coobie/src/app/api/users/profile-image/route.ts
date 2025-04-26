@@ -64,9 +64,8 @@ export async function GET(request: NextRequest) {
 // POST: Upload profile image
 export async function POST(request: NextRequest) {
   try {
-    // 쿠키에서 토큰 가져오기
+    // 토큰 검증
     const token = (await cookies()).get("auth_token")?.value;
-    
     if (!token) {
       return NextResponse.json(
         { error: "인증되지 않은 요청입니다" },
@@ -74,16 +73,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 토큰 검증
     const tokenData = getTokenData(token);
-    if (!tokenData) {
+    if (!tokenData || !tokenData.userId) {
       return NextResponse.json(
         { error: "유효하지 않은 토큰입니다" },
         { status: 401 }
       );
     }
 
-    // FormData 처리
+    // 파일 처리
     const formData = await request.formData();
     const file = formData.get('file') as File;
     
@@ -94,16 +92,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use case 실행
+    // 이미지 업로드
     const profileImageRepository = new SbProfileImageRepository();
-    const profileImageUseCase = new ProfileImageUseCase(profileImageRepository);
-    
-    const profileImage = await profileImageUseCase.uploadProfileImage(tokenData.userId, file);
-    const imageUrl = profileImageRepository.getImageUrl(profileImage.fileName);
+    const profileImage = await profileImageRepository.uploadImage(tokenData.userId, file);
     
     return NextResponse.json({ 
       message: "프로필 이미지가 성공적으로 업로드되었습니다",
-      imageUrl 
+      imageUrl: profileImage.fileUrl
     });
   } catch (error: any) {
     console.error("프로필 이미지 업로드 중 오류 발생:", error);
@@ -113,6 +108,7 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 
 // DELETE: Remove profile image
 export async function DELETE(request: NextRequest) {
