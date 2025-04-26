@@ -5,6 +5,7 @@ import { BlockType } from "@/types/ScheduleType";
 import { useDrop } from "react-dnd";
 import BlockContainer from "./BlockContainer";
 import { toast } from "react-toastify";
+import { isOverlapping } from "@/utils/scheudle";
 
 interface ChartProps {
   blocks: BlockType[]; // 전체 블록 리스트
@@ -28,23 +29,6 @@ interface ChartProps {
     startTime: number,
     duration?: number
   ) => void; // 블록 이동 핸들러 (optional)
-}
-
-// 블록 겹침 여부 확인하는 함수
-function isOverlapping(
-  blocks: BlockType[],
-  date: string,
-  startTime: number,
-  duration: number,
-  exceptBlockId?: string
-) {
-  const endTime = startTime + duration;
-  return blocks.some((block) => {
-    if (block.date !== date) return false; // 날짜가 다르면 패스
-    if (block.id === exceptBlockId) return false; // 자기 자신은 제외
-    const blockEnd = block.startTime + block.duration;
-    return startTime < blockEnd && endTime > block.startTime; // 시간 겹치는지 확인
-  });
 }
 
 const Chart: React.FC<ChartProps> = ({

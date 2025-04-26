@@ -16,24 +16,6 @@ function formatDateString(date: string | Date): string {
   )}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-// 블록 간 시간 겹침(overlapping) 여부를 확인하는 함수
-function isOverlapping(
-  blocks: BlockType[],
-  date: string | Date,
-  startTime: number,
-  duration: number,
-  exceptBlockId?: string // 특정 블록 제외하고 겹침 체크할 때 사용
-) {
-  const endTime = startTime + duration;
-  const formattedDate = formatDateString(date);
-  return (blocks || []).some((block) => {
-    if (formatDateString(block.date) !== formattedDate) return false;
-    if (block.id === exceptBlockId) return false;
-    const blockEnd = block.startTime + block.duration;
-    return startTime < blockEnd && endTime > block.startTime;
-  });
-}
-
 export default function SchedulesPage() {
   // 시작 시간 (9시)
   const [startHour] = useState(9);
@@ -90,7 +72,7 @@ export default function SchedulesPage() {
         setProfile({
           name: user.name || user.username || user.nickname,
           position: getPositionName(user.positionId),
-          deaprtment: getDepartmentName(user.departmentId),
+          department: getDepartmentName(user.departmentId),
           avatar: user.avatarUrl || "/default-avatar.png",
         });
 
