@@ -1,3 +1,3 @@
 export class ProfileImage {
-  constructor(userId: string, fileName: string) {}
+  constructor(public userId: string, public fileName: string) {}
 }

@@ -1,9 +1,9 @@
-// src/app/components/user/UserCard.tsx
+// src/app/components/user/UserCard.tsx (수정된 버전)
 "use client";
 
 import { UserDto } from "@/application/usecases/user/dto/UserDto";
-import Image from "next/image";
 import Link from "next/link";
+import ProfileImage from "@/app/components/common/ProfileImage";
 
 interface UserCardProps {
   user: UserDto;
@@ -14,28 +14,14 @@ function UserCard({ user }: UserCardProps) {
     <Link href={`/user/profile/${user.id}`}>
       <div className="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow">
         <div className="flex items-start">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden">
-              <div className="w-full h-full flex items-center justify-center text-gray-400">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-8 w-8"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
-              </div>
-            </div>
-            {/* 오프라인 상태로 고정 */}
-            <div className="absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white bg-gray-400"></div>
-          </div>
+          {/* 프로필 이미지 컴포넌트로 교체 */}
+          <ProfileImage
+            userId={user.id}
+            size={64}
+            showStatus={true}
+            status="offline" // 실제로는 사용자 상태에 따라 동적으로 설정
+          />
+          
           <div className="ml-4 flex-1">
             <div className="flex justify-between items-start">
               <div>
