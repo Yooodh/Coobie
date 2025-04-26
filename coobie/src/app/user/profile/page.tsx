@@ -4,9 +4,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/app/components/common/Header";
-// import ProfileImageUpload from "@/app/components/user/ProfileImageUpload";
 import ProfileImageUpload from "@/app/components/common/ProfileImageUpload";
 import { UserDto } from "@/application/usecases/user/dto/UserDto";
+import { DepartmentDto, PositionDto } from "@/application/usecases/dto";
 
 export default function UserProfile() {
   const router = useRouter();
@@ -44,13 +44,13 @@ export default function UserProfile() {
         // 부서명과 직급명 매핑
         const getDepartmentName = (deptId?: number) => {
           if (!deptId) return undefined;
-          const dept = departments.find((d: any) => d.id === deptId);
+          const dept = departments.find((d: DepartmentDto) => d.id === deptId);
           return dept?.departmentName;
         };
 
         const getPositionName = (posId?: number) => {
           if (!posId) return undefined;
-          const pos = positions.find((p: any) => p.id === posId);
+          const pos = positions.find((p: PositionDto) => p.id === posId);
           return pos?.positionName;
         };
 
@@ -70,10 +70,12 @@ export default function UserProfile() {
         setUser(userDto);
         setUserStatus(userDto.status || "online");
         setProfileMessage(userDto.profileMessage || "");
-      } catch (err: any) {
-        setError(
-          err.message || "사용자 정보를 불러오는 중 오류가 발생했습니다"
-        );
+      } catch (err) {
+        if (err instanceof Error) {
+          setError(
+            err.message || "사용자 정보를 불러오는 중 오류가 발생했습니다"
+          );
+        }
       } finally {
         setLoading(false);
       }

@@ -1,29 +1,7 @@
-// import type { NextConfig } from "next";
-
-// const nextConfig: NextConfig = {
-//   // images: {
-//   //   domains: [
-//   //     'https://xivyzqrqnqznkqqkmhrc.supabase.co'
-//   //   ],
-//   // },
-//   images: {
-//     remotePatterns: [
-//       {
-//         protocol: 'https',
-//         hostname: 'https://xivyzqrqnqznkqqkmhrc.supabase.co',
-//         port: '',
-//         pathname: '/storage/v1/object/public/**',
-//       },
-//     ],
-//   },
-// };
-
-// export default nextConfig;
-
-// next.config.js
+import type { NextConfig } from "next";
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {

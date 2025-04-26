@@ -21,15 +21,17 @@ function UserCard({ user }: UserCardProps) {
             showStatus={true}
             status="offline" // 실제로는 사용자 상태에 따라 동적으로 설정
           />
-          
+
           <div className="ml-4 flex-1">
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="font-medium text-gray-900">{user.nickname}</h3>
                 <div className="text-xs text-gray-500 mt-1">
-                  {user.departmentName && user.positionName 
+                  {user.departmentName && user.positionName
                     ? `${user.departmentName} / ${user.positionName}`
-                    : user.departmentName || user.positionName || "부서/직급 미지정"}
+                    : user.departmentName ||
+                      user.positionName ||
+                      "부서/직급 미지정"}
                 </div>
               </div>
               <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-800">

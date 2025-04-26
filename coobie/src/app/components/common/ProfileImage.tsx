@@ -32,11 +32,14 @@ export default function ProfileImage({
   const fetchProfileImage = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/profile-image?userId=${userId}`);
-      const data = await response.json();
+      // 올바른 API 엔드포인트 사용
+      const response = await fetch(`/api/users/profile-image?userId=${userId}`);
       
-      if (response.ok && data.profileImage) {
-        setImage(data.profileImage);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.profileImage) {
+          setImage(data.profileImage);
+        }
       }
     } catch (err) {
       console.error("프로필 이미지 로딩 중 오류 발생:", err);
@@ -55,12 +58,6 @@ export default function ProfileImage({
     }
   };
 
-  // 이니셜 가져오기 (이미지가 없을 경우 사용)
-  const getInitial = (userId: string) => {
-    // userId의 첫 글자를 대문자로 반환
-    return userId.charAt(0).toUpperCase();
-  };
-
   return (
     <div className={`relative ${className}`}>
       <div
@@ -68,26 +65,35 @@ export default function ProfileImage({
           ${loading ? "animate-pulse" : ""}`}
         style={{ width: `${size}px`, height: `${size}px` }}
       >
-        {image ? (
+        {loading ? (
+          <div className="animate-pulse w-full h-full bg-gray-300"></div>
+        ) : image && image.fileUrl ? (
           <Image
             src={image.fileUrl}
             alt="프로필 이미지"
             fill
             sizes={`${size}px`}
             className="object-cover"
+            onError={() => {
+              setImage(null);
+            }}
           />
         ) : (
-          <div className="text-gray-600 font-bold flex items-center justify-center h-full w-full">
-            {getInitial(userId)}
-          </div>
+          <Image
+            src="/images/쿠비 파비콘.png"
+            alt="기본 프로필 이미지"
+            fill
+            sizes={`${size}px`}
+            className="object-cover"
+          />
         )}
       </div>
       
       {/* 상태 표시 (선택적) */}
       {showStatus && (
         <div 
-          className={`absolute bottom-0 right-0 w-${Math.max(2, size/8)} h-${Math.max(2, size/8)} 
-            rounded-full border-2 border-white ${getStatusColor()}`}
+          className={`absolute bottom-0 right-0 rounded-full border-2 border-white ${getStatusColor()}`}
+          style={{ width: `${size/4}px`, height: `${size/4}px` }}
         ></div>
       )}
     </div>
