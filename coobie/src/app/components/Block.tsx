@@ -3,20 +3,20 @@ import React, { useRef, useState, useEffect } from "react";
 import { BlockType } from "@/types/ScheduleType";
 import { useDrag } from "react-dnd";
 import { toast } from "react-toastify";
-import { isOverlapping } from "@/utils/scheudle";
+import { isOverlapping } from "@/utils/schedule";
 
 interface BlockProps {
   block: BlockType; // 표시할 일정 블록의 정보
   blocks: BlockType[]; // 현재 날짜의 모든 일정 블록 정보
   startHour: number; // 스케줄 표의 시작 시간
   onResize: (
-    id: string, // 변경할 블록의 ID
+    id: number, // 변경할 블록의 ID
     newDuration: number, // 새로운 지속 시간 (시간 단위)
     newStartTime?: number, // 새로운 시작 시간 (시간 단위, 위로 리사이징 시 필요)
     expansionState?: 0 | 1 | 2 // 확장 상태
   ) => boolean | void; // 리사이징 성공 여부 또는 콜백 함수
-  onDelete: (id: string) => void; // 삭제 콜백 함수
-  onMove?: (id: string, date: string, startTime: number) => void; // 이동 콜백 함수 (드래그 앤 드롭)
+  onDelete: (id: number) => void; // 삭제 콜백 함수
+  onMove?: (id: number, date: string, startTime: number) => void; // 이동 콜백 함수 (드래그 앤 드롭)
 }
 
 // 실제 일정 블록 UI 컴포넌트

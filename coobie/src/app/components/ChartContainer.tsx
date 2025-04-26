@@ -51,18 +51,18 @@ function getMonthWeeks(year: number, month: number) {
 interface ChartContainerProps {
   blocks: BlockType[]; // 블럭 데이터
   onResizeBlock: (
-    id: string,
+    id: number,
     newDuration: number,
     newStartTime?: number
   ) => void; // 블럭 크기 조정
-  onDeleteBlock: (id: string) => void; // 블럭 삭제
+  onDeleteBlock: (id: number) => void; // 블럭 삭제
   startHour: number; // 차트 시작 시간 (ex: 9시)
   onAddBlock: (
     type: "휴가" | "외근" | "회의",
     date: string,
     startTime: number
   ) => void; // 블럭 추가
-  onMoveBlock?: (id: string, date: string, startTime: number) => void; // 블럭 이동 (옵션)
+  onMoveBlock?: (id: number, date: string, startTime: number) => void; // 블럭 이동 (옵션)
 }
 
 // 메인 컴포넌트

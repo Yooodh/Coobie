@@ -9,13 +9,13 @@ interface BlockContainerProps {
   date: string; // 현재 날짜 (YYYY-MM-DD)
   startHour: number; // 차트의 시작 시간
   onResizeBlock: (
-    id: string,
+    id: number,
     newDuration: number,
     newStartTime?: number,
     expansionState?: 0 | 1 | 2
   ) => void; // 블록 리사이즈 이벤트 핸들러
-  onDeleteBlock: (id: string) => void; // 블록 삭제 이벤트 핸들러
-  onMoveBlock?: (id: string, date: string, startTime: number) => void; // 블록 이동 이벤트 핸들러 (선택적)
+  onDeleteBlock: (id: number) => void; // 블록 삭제 이벤트 핸들러
+  onMoveBlock?: (id: number, date: string, startTime: number) => void; // 블록 이동 이벤트 핸들러 (선택적)
 }
 
 // BlockContainer 컴포넌트 정의

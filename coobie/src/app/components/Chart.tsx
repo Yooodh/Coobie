@@ -5,17 +5,17 @@ import { BlockType } from "@/types/ScheduleType";
 import { useDrop } from "react-dnd";
 import BlockContainer from "./BlockContainer";
 import { toast } from "react-toastify";
-import { isOverlapping } from "@/utils/scheudle";
+import { isOverlapping } from "@/utils/schedule";
 
 interface ChartProps {
   blocks: BlockType[]; // 전체 블록 리스트
   onResizeBlock: (
-    id: string,
+    id: number,
     newDuration: number,
     newStartTime?: number,
     expansionState?: 0 | 1 | 2
   ) => void; // 블록 리사이즈 이벤트 핸들러
-  onDeleteBlock: (id: string) => void; // 블록 삭제 이벤트 핸들러
+  onDeleteBlock: (id: number) => void; // 블록 삭제 이벤트 핸들러
   date: Date; // 현재 날짜
   startHour: number; // 차트의 시작 시간
   onAddBlock?: (
@@ -24,7 +24,7 @@ interface ChartProps {
     startTime: number
   ) => void; // 블록 추가 핸들러 (optional)
   onMoveBlock?: (
-    id: string,
+    id: number,
     date: string,
     startTime: number,
     duration?: number

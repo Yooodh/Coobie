@@ -1,5 +1,5 @@
 export interface BlockType {
-  id: string;
+  id: number;
   date: string;
   startTime: number;
   duration: number;
@@ -9,6 +9,7 @@ export interface BlockType {
 }
 
 export interface ProfileType {
+  id: string;
   name: string;
   nickname?: string;
   position: string;
