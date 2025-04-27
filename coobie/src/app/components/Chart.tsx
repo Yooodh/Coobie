@@ -1,106 +1,181 @@
 "use client";
+
 import React, { useRef } from "react";
 import BlockContainer from "./BlockContainer";
 import { BlockType } from "@/types/ScheduleType";
 import { useDrop } from "react-dnd";
+import { toast } from "react-toastify";
+import { isOverlapping } from "@/utils/schedule";
 
 interface ChartProps {
-  blocks: BlockType[]; // 모든 일정 블록 데이터 배열
+  blocks: BlockType[];
+  readOnly?: boolean;
   onResizeBlock: (
-    id: string,
+    id: number,
     newDuration: number,
-    newStartTime?: number
-  ) => void; // 블록 크기 조절 시 호출되는 함수
-  onDeleteBlock: (id: string) => void; // 블록 삭제 시 호출되는 함수
-  day: number; // 현재 표시할 요일/날짜 인덱스
-  date: Date; // 현재 날짜 객체
-  startHour: number; // 차트의 시작 시간 (예: 9시)
+    newStartTime?: number,
+    expansionState?: 0 | 1 | 2
+  ) => void;
+  onDeleteBlock: (id: number) => void;
+  date: Date;
+  startHour: number;
   onAddBlock?: (
     type: "휴가" | "외근" | "회의",
-    day: number,
+    date: string,
     startTime: number
-  ) => void; // 블록 추가 시 호출되는 함수 (선택적)
-  onMoveBlock?: (id: string, day: number, startTime: number) => void; // 블록 이동 시 호출되는 함수 (선택적)
+  ) => void;
+  onMoveBlock?: (
+    id: number,
+    date: string,
+    startTime: number,
+    duration?: number
+  ) => void;
 }
 
-// 차트 컴포넌트 구현
 const Chart: React.FC<ChartProps> = ({
   blocks,
   onResizeBlock,
   onDeleteBlock,
-  day,
   date,
   startHour,
   onAddBlock,
   onMoveBlock,
+  readOnly = false,
 }) => {
-  const dropRef = useRef<HTMLDivElement>(null); // 드롭 영역의 DOM 요소 참조 저장
+  const dropRef = useRef<HTMLDivElement>(null);
 
-  // --- React DnD 드롭 영역 설정 ---
-  const [{ isOver }, drop] = useDrop(() => ({
-    accept: ["block", "block-instance"], // 수락할 드래그 타입 (팔레트의 블록과 이미 있는 블록 인스턴스)
-    drop: (item: any, monitor) => {
-      // 드롭 이벤트 발생 시 처리 로직
-      const clientOffset = monitor.getClientOffset(); // 마우스 커서 위치 가져오기
-      if (!clientOffset || !dropRef.current) {
-        return; // 위치 정보나 참조가 없으면 중단
-      }
-      const hoverBoundingRect = dropRef.current.getBoundingClientRect(); // 드롭 영역의 위치와 크기 정보
-      const hoverY = clientOffset.y - hoverBoundingRect.top; // 드롭 영역 내 상대적 Y 위치
-      const hourHeight = 60; // 1시간의 픽셀 높이
-      const dropHour = Math.floor(hoverY / hourHeight); // 드롭된 시간 계산 (몇 번째 시간 블록인지)
-      const dropStartTime = Math.max(startHour, startHour + dropHour); // 시작 시간 계산 및 최소값 보장
+  // 드롭 핸들러
+  const handleDrop = (item: any, monitor: any) => {
+    if (readOnly) return; // 읽기 전용 모드면 동작 중지
+    const clientOffset = monitor.getClientOffset();
+    if (!clientOffset || !dropRef.current) return;
 
-      if (item.type && ["휴가", "외근", "회의"].includes(item.type)) {
-        // 블록 팔레트에서 드래그한 경우 (새 블록 추가)
-        onAddBlock?.(item.type, day, dropStartTime);
-      } else if (item.id && onMoveBlock) {
-        // 이미 있는 블록을 드래그하여 이동한 경우
-        onMoveBlock(item.id, day, dropStartTime);
+    // 날짜 포맷
+    const dateString = `${date.getFullYear()}-${String(
+      date.getMonth() + 1
+    ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+    // 드래그 시작 위치와 드래그 원본 위치 차이 계산
+    const initialClientOffset = monitor.getInitialClientOffset();
+    const initialSourceClientOffset = monitor.getInitialSourceClientOffset();
+    const dragOffsetY =
+      initialClientOffset && initialSourceClientOffset
+        ? initialClientOffset.y - initialSourceClientOffset.y
+        : 0;
+
+    // 드롭 위치 계산
+    const blockTopPosition = clientOffset.y - dragOffsetY;
+    const hoverBoundingRect = dropRef.current.getBoundingClientRect();
+    const hoverY = blockTopPosition - hoverBoundingRect.top;
+
+    const hourHeight = 60;
+    const dropHour = Math.floor(hoverY / hourHeight);
+    let dropStartTime = Math.max(startHour, startHour + dropHour);
+
+    let duration = 1;
+    let exceptBlockId = undefined;
+
+    if (item.duration) duration = item.duration;
+    if (item.id) exceptBlockId = item.id;
+
+    const chartEndHour = 19;
+    if (dropStartTime + duration > chartEndHour) {
+      dropStartTime = chartEndHour - duration;
+      if (dropStartTime < startHour) {
+        toast.error("차트에 공간이 부족해 이동할 수 없습니다!");
+        return;
       }
-    },
+    }
+
+    // 같은 날짜 블록만 필터링
+    const sameDate = (blocks || []).filter(
+      (block) => block.date === dateString
+    );
+
+    // 겹침 체크
+    const overlap = isOverlapping(
+      sameDate,
+      dateString,
+      dropStartTime,
+      duration,
+      exceptBlockId
+    );
+    if (overlap) {
+      toast.error("이미 블럭이 존재하는 시간대입니다!");
+      return;
+    }
+
+    // 새 블록 추가 또는 기존 블록 이동
+    if (item.type && ["휴가", "외근", "회의"].includes(item.type)) {
+      onAddBlock?.(item.type, dateString, dropStartTime); // Optional chaining 사용
+    } else if (item.id && onMoveBlock) {
+      onMoveBlock(item.id, dateString, dropStartTime);
+    }
+  };
+
+  // useDrop 훅
+  const [{ isOver }, drop] = useDrop({
+    accept: ["block", "block-instance"],
+    drop: handleDrop,
     collect: (monitor) => ({
-      isOver: !!monitor.isOver(), // 드래그 요소가 드롭 영역 위에 있는지 여부
+      isOver: !!monitor.isOver(),
     }),
-  }));
-  // ----------------------
+  });
 
-  // 시간 레이블 배열 생성 (startHour부터 9개 시간)
+  // 시간 라벨
   const timeLabels = Array.from({ length: 10 }, (_, i) => startHour + i);
 
-  // 날짜 포맷 함수 (MM.DD(요일) 형식으로 변환)
+  // 날짜 포맷 (ex: 04.26(금))
   const formatDate = (date: Date) => {
-    const month = String(date.getMonth() + 1).padStart(2, "0"); // 월 (01-12)
-    const day = String(date.getDate()).padStart(2, "0"); // 일 (01-31)
-    const weekDays = ["일", "월", "화", "수", "목", "금", "토"]; // 요일 문자열 배열
-    const weekDay = weekDays[date.getDay()]; // 해당 날짜의 요일 문자열
-    return `${month}.${day}(${weekDay})`; // "MM.DD(요일)" 형식으로 반환
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const weekDays = ["일", "월", "화", "수", "목", "금", "토"];
+    const weekDay = weekDays[date.getDay()];
+    return `${month}.${day}(${weekDay})`;
   };
 
-  // React DnD ref와 일반 ref를 함께 사용하기 위한 함수
+  // ref 합성
   const combineRefs = (el: HTMLDivElement | null) => {
-    drop(el); // React DnD의 drop ref 설정
-    dropRef.current = el; // 일반 useRef 설정
+    drop(el);
+    dropRef.current = el;
   };
 
-  // 차트 렌더링
+  // 현재 날짜를 YYYY-MM-DD 포맷으로 변환
+  const dateString = `${date.getFullYear()}-${String(
+    date.getMonth() + 1
+  ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+  // 리사이즈 핸들러 비활성화
+  const handleResize = readOnly ? () => {} : onResizeBlock;
+  const handleDelete = readOnly ? () => {} : onDeleteBlock;
+
   return (
     <div
       className={`border border-gray-200 w-full h-full transition-colors duration-200 
-        ${isOver ? "bg-blue-100 border-blue-300" : "bg-white"}`} // 드래그 요소가 위에 있을 때 배경색 변경
+        ${isOver ? "bg-blue-100 border-blue-300" : "bg-white"}`}
     >
-      {/* 날짜 헤더 */}
+      {/* 상단 날짜 표시 */}
       <div className="text-center p-2 border-b border-gray-200 text-lg font-medium text-gray-400">
-        {formatDate(date)} {/* MM.DD(요일) 형식의 날짜 표시 */}
+        {formatDate(date)}
       </div>
-      {/* 차트 본문 영역 (시간 레이블 + 블록 컨테이너) */}
-      <div ref={combineRefs} className="relative h-[600px]">
-        {/* 시간 레이블 (세로 눈금선) */}
+
+      {/* 차트 영역 */}
+      <div
+        ref={combineRefs}
+        className="relative overflow-hidden"
+        style={{ height: `${timeLabels.length * 60}px` }}
+      >
+        {/* 시간 라인 */}
         {timeLabels.map((hour, index) => (
           <div
             key={hour}
-            className="absolute w-full h-[60px] border-t border-gray-200 flex items-center"
-            style={{ top: `${index * 60}px` }} // 각 시간마다 60px 간격으로 배치
+            className={`absolute w-full h-[60px] border-t border-gray-200 flex items-center
+              ${
+                index === timeLabels.length - 1
+                  ? "border-b border-gray-200"
+                  : ""
+              }`}
+            style={{ top: `${index * 60}px` }}
           >
             <span className="text-sm pl-2 text-gray-400">
               {hour < 12
@@ -109,14 +184,15 @@ const Chart: React.FC<ChartProps> = ({
             </span>
           </div>
         ))}
-        {/* 블록 컨테이너 - 실제 일정 블록들을 표시 */}
+
+        {/* 블록 컨테이너 */}
         <BlockContainer
-          blocks={blocks} // 모든 블록 데이터
-          day={day} // 현재 날짜 인덱스
-          startHour={startHour} // 시작 시간
-          onResizeBlock={onResizeBlock} // 크기 조절 콜백
-          onDeleteBlock={onDeleteBlock} // 삭제 콜백
-          onMoveBlock={onMoveBlock} // 이동 콜백
+          blocks={blocks}
+          date={dateString}
+          startHour={startHour}
+          onResizeBlock={handleResize}
+          onDeleteBlock={handleDelete}
+          onMoveBlock={onMoveBlock}
         />
       </div>
     </div>

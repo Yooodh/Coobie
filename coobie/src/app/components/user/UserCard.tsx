@@ -11,7 +11,7 @@ interface UserCardProps {
 
 function UserCard({ user }: UserCardProps) {
   return (
-    <Link href={`/user/profile/${user.id}`}>
+    <Link href={`/schedules/${user.id}`}>
       <div className="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow">
         <div className="flex items-start">
           {/* 프로필 이미지 컴포넌트로 교체 */}
