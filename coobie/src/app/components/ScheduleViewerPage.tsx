@@ -1,3 +1,4 @@
+// src/app/components/ScheduleViewerPage.tsx
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -35,6 +36,11 @@ export default function ScheduleViewerPage({
   const [isOwner, setIsOwner] = useState(false);
   const [userId, setUserId] = useState<string | undefined>(params?.userId);
 
+  // 부서/직급 목록 상태 추가
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [positions, setPositions] = useState<any[]>([]);
+
+  // 스케줄 데이터 fetch
   const fetchScheduleData = async (userId: string) => {
     try {
       const scheduleRes = await fetch(`/api/schedules?userId=${userId}`, {
@@ -55,9 +61,23 @@ export default function ScheduleViewerPage({
     }
   };
 
+  // 프로필 + 부서/직급명 매핑 fetch
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // 부서/직급 목록 병렬 fetch
+        const [departmentsRes, positionsRes] = await Promise.all([
+          fetch("/api/departments"),
+          fetch("/api/positions"),
+        ]);
+        const departmentsData = departmentsRes.ok
+          ? await departmentsRes.json()
+          : [];
+        const positionsData = positionsRes.ok ? await positionsRes.json() : [];
+        setDepartments(departmentsData);
+        setPositions(positionsData);
+
+        // 사용자 정보 fetch
         const profileRes = await fetch("/api/auth/me");
         if (!profileRes.ok) throw new Error("인증 정보 조회 실패");
         const { user: currentUser } = await profileRes.json();
@@ -66,13 +86,32 @@ export default function ScheduleViewerPage({
         setUserId(targetUserId);
         setIsOwner(targetUserId === currentUser.id);
 
+        let userData;
         if (targetUserId === currentUser.id) {
-          setProfile(currentUser);
+          userData = currentUser;
         } else {
           const otherProfileRes = await fetch(`/api/users/${targetUserId}`);
           if (!otherProfileRes.ok) throw new Error("타인 프로필 조회 실패");
-          setProfile(await otherProfileRes.json());
+          userData = await otherProfileRes.json();
         }
+
+        // 부서/직급명 매핑
+        const departmentName = departmentsData.find(
+          (d: any) => d.id === userData.departmentId
+        )?.departmentName;
+        const positionName = positionsData.find(
+          (p: any) => p.id === userData.positionId
+        )?.positionName;
+
+        setProfile({
+          ...userData,
+          department: departmentName,
+          position: positionName,
+        });
+
+        console.log("params.userId:", params?.userId);
+        console.log("currentUser.id:", currentUser.id);
+        console.log("isOwner:", targetUserId === currentUser.id);
 
         await fetchScheduleData(targetUserId);
       } catch (e) {
@@ -114,7 +153,7 @@ export default function ScheduleViewerPage({
               ...block,
               startTime: newStartTime ?? block.startTime,
               duration: newDuration,
-              expansionState: expansionState ?? block.expansionState, // 확장 상태 반영
+              expansionState: expansionState ?? block.expansionState,
             }
           : block
       )
@@ -165,7 +204,13 @@ export default function ScheduleViewerPage({
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading)
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white bg-opacity-60">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-500"></div>
+        <span className="mt-4 text-gray-700">로딩 중...</span>
+      </div>
+    );
   if (!profile) return <div>프로필 로딩 중...</div>;
 
   return (
@@ -198,16 +243,26 @@ export default function ScheduleViewerPage({
       {isOwner && (
         <button
           onClick={handleSave}
-          className="fixed bottom-8 right-8 bg-blue-500 hover:bg-blue-600 text-white text-lg font-bold px-8 py-2 rounded-lg shadow-lg transition-all z-50"
+          className="
+          fixed bottom-22 right-9 z-50
+          flex items-center justify-center
+          bg-blue-500 text-white font-semibold text-base
+          px-8 py-2 rounded-full
+          border border-blue-100
+          shadow-lg
+          transition-all duration-150
+         hover:bg-blue-600 hover:text-white hover:shadow-xl hover:-translate-y-0.5
+          active:scale-95
+          cursor-pointer
+          gap-1
+    "
+          style={{
+            letterSpacing: "0.05em",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+          }}
         >
           저장
         </button>
-      )}
-
-      {!isOwner && (
-        <div className="text-center py-4 text-gray-500">
-          다른 사용자의 스케줄을 확인 중입니다. 수정 권한이 없습니다.
-        </div>
       )}
     </main>
   );
