@@ -1,22 +1,13 @@
-import { createClient } from "@/utils/supabase/server";
+import { createBrowserSupabaseClient } from "@/utils/supabase/client";
 import { ScheduleRepository } from "@/domain/repositories/ScheduleRepository";
 import { Schedule } from "@/domain/entities/Schedule";
 import { ScheduleCategory } from "@/domain/entities/ScheduleCategory";
-
-// 커스텀 에러 클래스
-export class ScheduleRepositoryError extends Error {
-  constructor(message: string) {
-    super(`[ScheduleRepository] ${message}`);
-    this.name = "ScheduleRepositoryError";
-  }
-}
+import { ScheduleRepositoryError } from "./ScheduleRepositoryError";
 
 export class SbScheduleRepository implements ScheduleRepository {
-  // 테이블명 상수화
   private static readonly SCHEDULE_TABLE = "schedule";
   private static readonly CATEGORY_TABLE = "schedulecategory";
 
-  // 엔티티 변환 메서드
   private toSchedule = (data: any): Schedule => {
     return new Schedule(
       data.ID,
@@ -34,14 +25,21 @@ export class SbScheduleRepository implements ScheduleRepository {
     return new ScheduleCategory(data.ID, data.schedule_type);
   };
 
-  // 전체 스케줄 조회
-  async fetchSchedules(): Promise<Schedule[]> {
+  // 변경된 부분: userId 필터 추가
+  async fetchSchedules(userId?: string): Promise<Schedule[]> {
     try {
-      const client = await createClient();
-      const { data, error } = await client
+      const client = await createBrowserSupabaseClient();
+      let query = client
         .from(SbScheduleRepository.SCHEDULE_TABLE)
         .select("*")
-        .order("ID", { ascending: true });
+        .is("deleted_at", null);
+
+      // userId가 제공된 경우 필터 추가
+      if (userId) {
+        query = query.eq("user_id", userId);
+      }
+
+      const { data, error } = await query.order("ID", { ascending: true });
 
       if (error) {
         throw new ScheduleRepositoryError(
@@ -57,10 +55,10 @@ export class SbScheduleRepository implements ScheduleRepository {
     }
   }
 
-  // 전체 스케줄 카테고리 조회
+  // 이하 기존 메서드 유지
   async fetchScheduleCategories(): Promise<ScheduleCategory[]> {
     try {
-      const client = await createClient();
+      const client = await createBrowserSupabaseClient();
       const { data, error } = await client
         .from(SbScheduleRepository.CATEGORY_TABLE)
         .select("*")
@@ -80,10 +78,9 @@ export class SbScheduleRepository implements ScheduleRepository {
     }
   }
 
-  // ID로 특정 스케줄 카테고리 조회
   async fetchScheduleCategoryById(id: number): Promise<ScheduleCategory> {
     try {
-      const client = await createClient();
+      const client = await createBrowserSupabaseClient();
       const { data, error } = await client
         .from(SbScheduleRepository.CATEGORY_TABLE)
         .select("*")
@@ -104,15 +101,13 @@ export class SbScheduleRepository implements ScheduleRepository {
     }
   }
 
-  // 스케줄을 다른 카테고리로 이동
   async moveScheduleToCategory(
+    // ← 인터페이스와 이름 일치
     scheduleId: number,
     newCategoryId: number
   ): Promise<Schedule> {
     try {
-      const client = await createClient();
-
-      // 스케줄 존재 여부 확인
+      const client = await createBrowserSupabaseClient();
       const { data: existingSchedule, error: checkError } = await client
         .from(SbScheduleRepository.SCHEDULE_TABLE)
         .select("*")
@@ -125,7 +120,6 @@ export class SbScheduleRepository implements ScheduleRepository {
         );
       }
 
-      // 스케줄 카테고리 업데이트
       const { data, error } = await client
         .from(SbScheduleRepository.SCHEDULE_TABLE)
         .update({ schedulecategory_id: newCategoryId })
@@ -147,37 +141,9 @@ export class SbScheduleRepository implements ScheduleRepository {
     }
   }
 
-  // 카테고리 이동
-  async moveScheduleCategory(
-    id: number,
-    newCategoryId: number
-  ): Promise<ScheduleCategory[]> {
-    try {
-      const client = await createClient();
-      const { data, error } = await client
-        .from(SbScheduleRepository.CATEGORY_TABLE)
-        .update({ schedule_category_id: newCategoryId })
-        .eq("ID", id)
-        .select("*");
-
-      if (error) {
-        throw new ScheduleRepositoryError(
-          `카테고리 이동 실패 (ID: ${id}): ${error.message}`
-        );
-      }
-
-      return (data ?? []).map(this.toScheduleCategory);
-    } catch (err) {
-      throw new ScheduleRepositoryError(
-        `카테고리 이동 중 오류 발생: ${(err as Error).message}`
-      );
-    }
-  }
-
-  // 스케줄 생성
   async createSchedule(schedule: Schedule): Promise<Schedule> {
     try {
-      const client = await createClient();
+      const client = await createBrowserSupabaseClient();
       const { data, error } = await client
         .from(SbScheduleRepository.SCHEDULE_TABLE)
         .insert({
@@ -187,7 +153,6 @@ export class SbScheduleRepository implements ScheduleRepository {
           deleted_at: schedule.deletedAt,
           schedulecategory_id: schedule.scheduleCategoryId,
           ended_at: schedule.endedAt,
-          category: schedule.category,
         })
         .select("*")
         .single();
@@ -204,12 +169,9 @@ export class SbScheduleRepository implements ScheduleRepository {
     }
   }
 
-  // 스케줄 삭제
   async deleteSchedule(userId: string, scheduleId: number): Promise<Schedule> {
     try {
-      const client = await createClient();
-
-      // 해당 사용자의 스케줄인지 확인
+      const client = await createBrowserSupabaseClient();
       const { data: existingSchedule, error: checkError } = await client
         .from(SbScheduleRepository.SCHEDULE_TABLE)
         .select("*")
@@ -223,21 +185,19 @@ export class SbScheduleRepository implements ScheduleRepository {
         );
       }
 
-      // soft delete 구현
-      const { data, error } = await client
+      const { error } = await client
         .from(SbScheduleRepository.SCHEDULE_TABLE)
-        .update({ deleted_at: new Date().toISOString() })
+        .delete()
         .eq("ID", scheduleId)
-        .select("*")
-        .single();
+        .eq("user_id", userId);
 
-      if (error || !data) {
+      if (error) {
         throw new ScheduleRepositoryError(
           `스케줄 삭제 실패 (ID: ${scheduleId}): ${error?.message}`
         );
       }
 
-      return this.toSchedule(data);
+      return this.toSchedule(existingSchedule);
     } catch (err) {
       throw new ScheduleRepositoryError(
         `스케줄 삭제 중 오류 발생: ${(err as Error).message}`
@@ -245,12 +205,9 @@ export class SbScheduleRepository implements ScheduleRepository {
     }
   }
 
-  // 스케줄 수정
   async updateSchedule(schedule: Schedule): Promise<Schedule> {
     try {
-      const client = await createClient();
-
-      // 날짜 포맷 변환
+      const client = await createBrowserSupabaseClient();
       const updateData = {
         user_id: schedule.userId,
         started_at: schedule.startedAt.toISOString(),
@@ -258,7 +215,6 @@ export class SbScheduleRepository implements ScheduleRepository {
         date: schedule.date.toISOString(),
         deleted_at: schedule.deletedAt?.toISOString() ?? null,
         schedulecategory_id: schedule.scheduleCategoryId,
-        category: schedule.category,
       };
 
       const { data, error } = await client
@@ -278,6 +234,36 @@ export class SbScheduleRepository implements ScheduleRepository {
     } catch (err) {
       throw new ScheduleRepositoryError(
         `스케줄 업데이트 중 오류 발생: ${(err as Error).message}`
+      );
+    }
+  }
+
+  async findByDateAndTime(
+    userId: string,
+    date: Date,
+    startedAt: Date
+  ): Promise<Schedule[]> {
+    try {
+      const client = await createBrowserSupabaseClient();
+      const dateStr = date.toISOString().split("T")[0];
+      const startTimeStr = startedAt.toISOString();
+
+      const { data, error } = await client
+        .from(SbScheduleRepository.SCHEDULE_TABLE)
+        .select("*")
+        .eq("user_id", userId)
+        .eq("date", dateStr)
+        .eq("started_at", startTimeStr)
+        .is("deleted_at", null);
+
+      if (error) {
+        throw new ScheduleRepositoryError(`일정 검색 실패: ${error.message}`);
+      }
+
+      return (data ?? []).map(this.toSchedule);
+    } catch (err) {
+      throw new ScheduleRepositoryError(
+        `일정 검색 중 오류 발생: ${(err as Error).message}`
       );
     }
   }

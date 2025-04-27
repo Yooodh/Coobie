@@ -4,42 +4,81 @@ import Block from "./Block";
 import { BlockType } from "@/types/ScheduleType";
 
 interface BlockContainerProps {
-  blocks: BlockType[]; // 모든 일정 블록 데이터 배열
-  day: number; // 현재 표시할 요일/날짜 인덱스
+  blocks: BlockType[]; // 전체 블록 리스트
+  date: string; // 현재 날짜 (YYYY-MM-DD)
+  readOnly?: boolean;
   startHour: number; // 차트의 시작 시간
   onResizeBlock: (
-    id: string,
+    id: number,
     newDuration: number,
-    newStartTime?: number
-  ) => void; // 블록 크기 조절 시 호출되는 함수
-  onDeleteBlock: (id: string) => void; // 블록 삭제 시 호출되는 함수
-  onMoveBlock?: (id: string, day: number, startTime: number) => void; // 블록 이동 시 호출되는 함수 (선택적)
+    newStartTime?: number,
+    expansionState?: 0 | 1 | 2
+  ) => void; // 블록 리사이즈 이벤트 핸들러
+  onDeleteBlock: (id: number) => void; // 블록 삭제 이벤트 핸들러
+  onMoveBlock?: (id: number, date: string, startTime: number) => void; // 블록 이동 이벤트 핸들러 (선택적)
 }
 
-// BlockContainer 컴포넌트 구현
+// BlockContainer 컴포넌트 정의
 const BlockContainer: React.FC<BlockContainerProps> = ({
-  blocks,
-  day,
+  blocks = [],
+  date,
   startHour,
   onResizeBlock,
   onDeleteBlock,
-  onMoveBlock, // 추가된 블록 이동 핸들러
+  onMoveBlock,
+  readOnly = false,
 }) => {
-  // 현재 day에 해당하는 블록만 필터링
-  const dayBlocks = blocks.filter((block) => block.day === day);
+  const CHART_START = 9;
+  const CHART_END = 22;
+  const dayBlocks = blocks.filter((block) => {
+    // 날짜 형식 통일을 위해 포매팅
+    const blockDate = block.date.slice(0, 10);
+    const currentDate = date;
 
-  // 컨테이너와 필터링된 블록들 렌더링
+    // console.log(
+    //   "블록 날짜:",
+    //   blockDate,
+    //   "현재 날짜:",
+    //   currentDate,
+    //   "일치여부:",
+    //   blockDate === currentDate
+    // );
+
+    if (blockDate !== currentDate) return false;
+
+    // 시간 범위 체크는 유지
+    const blockEnd = block.startTime + block.duration - 1;
+    const visible = block.startTime <= CHART_END && blockEnd >= CHART_START;
+
+    // console.log(
+    //   "블록:",
+    //   block.id,
+    //   "표시여부:",
+    //   visible,
+    //   "시작시간:",
+    //   block.startTime,
+    //   "차트범위:",
+    //   CHART_START,
+    //   "-",
+    //   CHART_END
+    // );
+
+    return visible;
+  });
+
   return (
     <div className="relative h-full w-full">
-      {/* 현재 날짜의 모든 블록을 매핑하여 렌더링 */}
+      {/* 필터링된 블록들을 Block 컴포넌트로 렌더링 */}
       {dayBlocks.map((block) => (
         <Block
-          key={block.id} // React의 리스트 렌더링을 위한 고유 키
-          block={block} // 블록 데이터 전달
-          startHour={startHour} // 시작 시간 전달
-          onResize={onResizeBlock} // 크기 조절 콜백 전달
-          onDelete={onDeleteBlock} // 삭제 콜백 전달
-          onMove={onMoveBlock} // 이동 콜백 전달
+          key={block.id}
+          block={block}
+          blocks={blocks} // 전체 blocks도 하위 컴포넌트에 전달
+          startHour={startHour} // 차트 시작 시간
+          onResize={onResizeBlock} // 블록 리사이즈 핸들러 전달
+          onDelete={onDeleteBlock} // 블록 삭제 핸들러 전달
+          onMove={onMoveBlock} // 블록 이동 핸들러 전달 (optional)
+          readOnly={readOnly}
         />
       ))}
     </div>

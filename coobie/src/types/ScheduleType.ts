@@ -1,15 +1,18 @@
 export interface BlockType {
-  id: string;
-  day: number; // 0-6 (월-일)
-  startTime: number; // 시작 시간 (24시간 형식)
-  duration: number; // 지속 시간 (시간 단위)
+  id: number;
+  date: string;
+  startTime: number;
+  duration: number;
   type: "휴가" | "외근" | "회의";
   color: string;
+  expansionState?: 0 | 1 | 2; // 0: 기본(2칸), 1: 4칸, 2: 전체
 }
 
 export interface ProfileType {
+  id: string;
   name: string;
-  title: string;
-  company: string;
+  nickname?: string;
+  position: string;
+  department: string;
   avatar: string;
 }
