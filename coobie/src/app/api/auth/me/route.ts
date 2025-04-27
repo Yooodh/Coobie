@@ -73,8 +73,6 @@ export async function GET(request: NextRequest) {
       nickname: user.nickname,
       roleId: user.roleId,
       businessNumber: user.businessNumber,
-
-      // 추가 필드 : Yoo
       departmentId: user.departmentId,
       positionId: user.positionId,
     };
@@ -82,8 +80,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       user: authUser,
     });
-  } catch (error: any) {
-    console.error("사용자 정보 조회 중 오류 발생:", error);
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error("사용자 정보 조회 중 오류 발생:", error);
+    }
     return NextResponse.json(
       { error: "사용자 정보 조회 중 오류가 발생했습니다" },
       { status: 500 }

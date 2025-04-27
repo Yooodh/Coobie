@@ -5,6 +5,17 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CompanyDto } from "@/application/usecases/company/dto/CompanyDto";
 
+interface ApiResponse<T> {
+  message?: string;
+  error?: string;
+  data?: T;
+}
+
+interface CompaniesResponse {
+  companies: CompanyDto[];
+  total: number;
+  totalPages: number;
+}
 
 export default function RootDashboard() {
   const router = useRouter();
@@ -18,30 +29,34 @@ export default function RootDashboard() {
   const fetchCompanies = async () => {
     try {
       setLoading(true);
-      
+
       // 승인 대기 중인 회사 목록 가져오기
       const pendingResponse = await fetch("/api/companies?isApproved=false");
-      
+
       // 승인된 회사 목록 가져오기
       const approvedResponse = await fetch("/api/companies?isApproved=true");
-      
+
       if (!pendingResponse.ok || !approvedResponse.ok) {
         throw new Error("데이터를 불러오는데 실패했습니다");
       }
-      
-      const pendingData = await pendingResponse.json();
-      const approvedData = await approvedResponse.json();
-      
+
+      const pendingData = (await pendingResponse.json()) as CompaniesResponse;
+      const approvedData = (await approvedResponse.json()) as CompaniesResponse;
+
       setPendingCompanies(pendingData.companies || []);
       setApprovedCompanies(approvedData.companies || []);
       setError(null);
-    } catch (err: any) {
-      setError(err.message || "데이터를 불러오는 중 오류가 발생했습니다");
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || "데이터를 불러오는 중 오류가 발생했습니다");
+      } else {
+        setError("데이터를 불러오는 중 오류가 발생했습니다");
+      }
     } finally {
       setLoading(false);
     }
   };
-  
+
   useEffect(() => {
     fetchCompanies();
   }, []);
@@ -52,22 +67,33 @@ export default function RootDashboard() {
       const response = await fetch(`/api/companies/${companyId}/approve`, {
         method: "PATCH",
       });
-      
+
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = (await response.json()) as ApiResponse<null>;
         throw new Error(errorData.error || "회사 승인에 실패했습니다");
       }
-      
+
       // UI 업데이트
-      const approvedCompany = pendingCompanies.find(company => company.id === companyId);
+      const approvedCompany = pendingCompanies.find(
+        (company) => company.id === companyId
+      );
       if (approvedCompany) {
-        setPendingCompanies(prev => prev.filter(company => company.id !== companyId));
-        setApprovedCompanies(prev => [...prev, {...approvedCompany, isApproved: true}]);
+        setPendingCompanies((prev) =>
+          prev.filter((company) => company.id !== companyId)
+        );
+        setApprovedCompanies((prev) => [
+          ...prev,
+          { ...approvedCompany, isApproved: true },
+        ]);
       }
-      
+
       alert("회사가 성공적으로 승인되었습니다");
-    } catch (err: any) {
-      alert(err.message || "회사 승인 중 오류가 발생했습니다");
+    } catch (err) {
+      if (err instanceof Error) {
+        alert(err.message || "회사 승인 중 오류가 발생했습니다");
+      } else {
+        alert("회사 승인 중 오류가 발생했습니다");
+      }
     }
   };
 
@@ -78,68 +104,91 @@ export default function RootDashboard() {
         const response = await fetch(`/api/companies/${companyId}/reject`, {
           method: "PATCH",
         });
-        
+
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = (await response.json()) as ApiResponse<null>;
           throw new Error(errorData.error || "회사 가입 거절에 실패했습니다");
         }
-        
+
         // UI 업데이트
-        setPendingCompanies(prev => prev.filter(company => company.id !== companyId));
-        
+        setPendingCompanies((prev) =>
+          prev.filter((company) => company.id !== companyId)
+        );
+
         alert("회사 가입 신청이 거절되었습니다");
-      } catch (err: any) {
-        alert(err.message || "회사 가입 거절 중 오류가 발생했습니다");
+      } catch (err) {
+        if (err instanceof Error) {
+          alert(err.message || "회사 가입 거절 중 오류가 발생했습니다");
+        } else {
+          alert("회사 가입 거절 중 오류가 발생했습니다");
+        }
       }
     }
   };
 
-  // 회사 잠금 해제 처리
-  const handleUnlock = async (companyId: string) => {
+  // 비밀번호 초기화 및 잠금해제 처리
+  const handleResetPassword = async (companyId: string) => {
     try {
-      const response = await fetch(`/api/companies/${companyId}/unlock`, {
-        method: "PATCH",
-      });
-      
+      const response = await fetch(
+        `/api/companies/${companyId}/reset-password`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ defaultPassword: "0000" }),
+        }
+      );
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "회사 계정 잠금 해제에 실패했습니다");
+        const errorData = (await response.json()) as ApiResponse<null>;
+        throw new Error(errorData.error || `오류 ${response.status}`);
       }
-      
-      // UI 업데이트
-      setApprovedCompanies(prev => 
-        prev.map(company => 
-          company.id === companyId 
-            ? {...company, isLocked: false} 
-            : company
+
+      // UI 업데이트: 회사의 잠금 상태 해제 처리
+      setApprovedCompanies((prev) =>
+        prev.map((company) =>
+          company.id === companyId ? { ...company, isLocked: false } : company
         )
       );
-      
-      alert("회사 계정이 잠금 해제되었고 비밀번호가 초기화되었습니다");
-    } catch (err: any) {
-      alert(err.message || "회사 계정 잠금 해제 중 오류가 발생했습니다");
+
+      alert("회사 관리자 계정의 비밀번호가 초기화되고 잠금이 해제되었습니다");
+    } catch (err) {
+      if (err instanceof Error) {
+        alert(
+          err.message || "비밀번호 초기화 및 잠금해제 중 오류가 발생했습니다."
+        );
+      } else {
+        alert("비밀번호 초기화 및 잠금해제 중 오류가 발생했습니다.");
+      }
     }
   };
 
   // 회사 삭제 처리
   const handleDelete = async (companyId: string) => {
-    if (confirm("정말 이 회사를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) {
+    if (
+      confirm("정말 이 회사를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")
+    ) {
       try {
         const response = await fetch(`/api/companies/${companyId}`, {
           method: "DELETE",
         });
-        
+
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = (await response.json()) as ApiResponse<null>;
           throw new Error(errorData.error || "회사 삭제에 실패했습니다");
         }
-        
+
         // UI 업데이트
-        setApprovedCompanies(prev => prev.filter(company => company.id !== companyId));
-        
+        setApprovedCompanies((prev) =>
+          prev.filter((company) => company.id !== companyId)
+        );
+
         alert("회사가 성공적으로 삭제되었습니다");
-      } catch (err: any) {
-        alert(err.message || "회사 삭제 중 오류가 발생했습니다");
+      } catch (err) {
+        if (err instanceof Error) {
+          alert(err.message || "회사 삭제 중 오류가 발생했습니다");
+        } else {
+          alert("회사 삭제 중 오류가 발생했습니다");
+        }
       }
     }
   };
@@ -147,43 +196,45 @@ export default function RootDashboard() {
   // 날짜 포맷 유틸리티
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
+    return date.toLocaleDateString("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     });
   };
 
   // 로그아웃 처리
   const handleLogout = async () => {
     try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST'
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
       });
-      
+
       if (response.ok) {
-        router.push('/root/login');
+        router.push("/root/login");
       } else {
-        console.error('로그아웃 응답 오류:', response.status);
+        console.error("로그아웃 응답 오류:", response.status);
       }
     } catch (err) {
-      console.error('로그아웃 중 오류 발생:', err);
+      console.error("로그아웃 중 오류 발생:", err);
     }
   };
 
-  // UI 렌더링
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 상단 헤더 */}
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <span className="text-amber-600 font-semibold text-xl">Coobie</span>
+              <span className="text-amber-600 font-semibold text-xl">
+                Coobie
+              </span>
             </div>
-            <h1 className="ml-4 text-xl font-bold text-gray-900">루트 관리자 대시보드</h1>
+            <h1 className="ml-4 text-xl font-bold text-gray-900">
+              루트 관리자 대시보드
+            </h1>
           </div>
-          <button 
+          <button
             onClick={handleLogout}
             className="ml-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
           >
@@ -236,6 +287,11 @@ export default function RootDashboard() {
                   }`}
                 >
                   회사 관리
+                  {approvedCompanies.length > 0 && (
+                    <span className="ml-2 bg-amber-100 text-amber-800 py-0.5 px-2 rounded-full text-xs">
+                      {approvedCompanies.length}
+                    </span>
+                  )}
                 </button>
               </nav>
             </div>
@@ -244,7 +300,9 @@ export default function RootDashboard() {
             {activeTab === "pending" && (
               <div className="bg-white shadow overflow-hidden sm:rounded-md">
                 <div className="px-4 py-5 sm:px-6">
-                  <h2 className="text-lg font-medium leading-6 text-gray-900">가입 신청 리스트</h2>
+                  <h2 className="text-lg font-medium leading-6 text-gray-900">
+                    가입 신청 리스트
+                  </h2>
                   <p className="mt-1 text-sm text-gray-500">
                     승인 대기 중인 회사 목록입니다
                   </p>
@@ -265,7 +323,9 @@ export default function RootDashboard() {
                             <div className="mt-1 flex items-center text-sm text-gray-500">
                               <span>사업자번호: {company.businessNumber}</span>
                               <span className="mx-2">•</span>
-                              <span>신청일: {formatDate(company.createdAt)}</span>
+                              <span>
+                                신청일: {formatDate(company.createdAt)}
+                              </span>
                             </div>
                           </div>
                           <div className="flex space-x-2">
@@ -294,7 +354,9 @@ export default function RootDashboard() {
             {activeTab === "approved" && (
               <div className="bg-white shadow overflow-hidden sm:rounded-md">
                 <div className="px-4 py-5 sm:px-6">
-                  <h2 className="text-lg font-medium leading-6 text-gray-900">회사 관리</h2>
+                  <h2 className="text-lg font-medium leading-6 text-gray-900">
+                    회사 관리
+                  </h2>
                   <p className="mt-1 text-sm text-gray-500">
                     등록된 회사 목록입니다
                   </p>
@@ -313,29 +375,34 @@ export default function RootDashboard() {
                               <h3 className="text-lg font-medium text-gray-900">
                                 {company.companyName}
                               </h3>
-                              <span className={`ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                company.isLocked
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-green-100 text-green-800"
-                              }`}>
+                              <span
+                                className={`ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                  company.isLocked
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-green-100 text-green-800"
+                                }`}
+                              >
                                 {company.isLocked ? "잠금" : "정상"}
                               </span>
                             </div>
                             <div className="mt-1 flex items-center text-sm text-gray-500">
                               <span>사업자번호: {company.businessNumber}</span>
                               <span className="mx-2">•</span>
-                              <span>등록일: {formatDate(company.createdAt)}</span>
+                              <span>
+                                등록일: {formatDate(company.createdAt)}
+                              </span>
                             </div>
                           </div>
                           <div className="flex space-x-2">
-                            {company.isLocked && (
-                              <button
-                                onClick={() => handleUnlock(company.id)}
-                                className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                              >
-                                잠금해제
-                              </button>
-                            )}
+                            <button
+                              onClick={() => handleResetPassword(company.id)}
+                              className={`inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white ${
+                                company.isLocked &&
+                                "bg-orange-500 hover:bg-orange-600"
+                              } `}
+                            >
+                              비밀번호 초기화
+                            </button>
                             <button
                               onClick={() => handleDelete(company.id)}
                               className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"

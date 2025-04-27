@@ -75,5 +75,5 @@ export async function POST(request: NextRequest) {
       { error: "회사 가입 신청 처리 중 오류가 발생했습니다" },
       { status: 500 }
     );
-  }
+  }gi
 }
