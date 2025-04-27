@@ -1,16 +1,12 @@
 "use client";
 
-import { createBrowserSupabaseClient } from "@/utils/supabase/client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import UserCard from "@/app/components/user/UserCard";
 import Header from "@/app/components/common/Header";
 import { UserDto } from "@/application/usecases/user/dto/UserDto";
 import { DepartmentDto, PositionDto } from "@/application/usecases/dto";
 
 export default function UserDashboard() {
-  const router = useRouter();
-  const supabase = createBrowserSupabaseClient();
   const [currentUser, setCurrentUser] = useState<UserDto | null>(null);
   const [users, setUsers] = useState<UserDto[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserDto[]>([]);
