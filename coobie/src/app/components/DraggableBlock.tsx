@@ -30,7 +30,7 @@ export default function DraggableBlock({ type, color }: DraggableBlockProps) {
           : "0 2px 5px rgba(0,0,0,0.1)", // 평소에는 약한 그림자
         transition: "transform 0.1s, box-shadow 0.1s, opacity 0.1s",
       }}
-      className="w-32 h-24 text-2xl font-bold text-white rounded-xl"
+      className="w-32 h-24 text-2xl font-bold text-white rounded-xl cursor-grab active:cursor-grabbing"
     >
       {type} {/* 블록의 종류(휴가/외근/회의) 텍스트로 표시 */}
     </button>
