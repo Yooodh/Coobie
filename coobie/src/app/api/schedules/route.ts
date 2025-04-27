@@ -4,18 +4,40 @@ import { fetchSchedulesUseCase } from "@/application/usecases/schedule/FetchSche
 import { createScheduleUseCase } from "@/application/usecases/schedule/CreateScheduleUseCase";
 import { updateScheduleUseCase } from "@/application/usecases/schedule/UpdateScheduleUseCase";
 import { Schedule } from "@/domain/entities/Schedule";
+import { getTokenData } from "@/utils/auth";
 
 // GET: 전체 스케줄 조회
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+
   try {
+    // 1. 쿠키에서 토큰 추출
+    const token = request.cookies.get("auth_token")?.value;
+    if (!token)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // 2. 토큰 검증 (사용자 인증만 확인)
+    const payload = await getTokenData(token);
+    if (!payload?.userId) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
+
+    // 3. 타겟 사용자 ID 추출 (쿼리 파라미터)
+    const targetUserId = searchParams.get("userId");
+    if (!targetUserId) {
+      return NextResponse.json(
+        { error: "userId is required" },
+        { status: 400 }
+      );
+    }
+
+    // 4. 데이터 조회 (권한 검증 없이 조회 허용)
     const repository = new SbScheduleRepository();
-    const schedules = await fetchSchedulesUseCase(repository);
+    const schedules = await fetchSchedulesUseCase(repository, targetUserId);
+
     return NextResponse.json({ blocks: schedules }, { status: 200 });
   } catch (error) {
-    return NextResponse.json(
-      { error: "스케줄 데이터 불러오기 실패" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "스케줄 조회 실패" }, { status: 500 });
   }
 }
 

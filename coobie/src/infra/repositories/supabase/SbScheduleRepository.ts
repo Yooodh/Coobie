@@ -5,11 +5,9 @@ import { ScheduleCategory } from "@/domain/entities/ScheduleCategory";
 import { ScheduleRepositoryError } from "./ScheduleRepositoryError";
 
 export class SbScheduleRepository implements ScheduleRepository {
-  // 테이블명 상수화
   private static readonly SCHEDULE_TABLE = "schedule";
   private static readonly CATEGORY_TABLE = "schedulecategory";
 
-  // 엔티티 변환 메서드
   private toSchedule = (data: any): Schedule => {
     return new Schedule(
       data.ID,
@@ -27,15 +25,21 @@ export class SbScheduleRepository implements ScheduleRepository {
     return new ScheduleCategory(data.ID, data.schedule_type);
   };
 
-  // 전체 스케줄 조회
-  async fetchSchedules(): Promise<Schedule[]> {
+  // 변경된 부분: userId 필터 추가
+  async fetchSchedules(userId?: string): Promise<Schedule[]> {
     try {
       const client = await createBrowserSupabaseClient();
-      const { data, error } = await client
+      let query = client
         .from(SbScheduleRepository.SCHEDULE_TABLE)
         .select("*")
-        .is("deleted_at", null) // 중요: 삭제되지 않은 항목만 가져오기
-        .order("ID", { ascending: true });
+        .is("deleted_at", null);
+
+      // userId가 제공된 경우 필터 추가
+      if (userId) {
+        query = query.eq("user_id", userId);
+      }
+
+      const { data, error } = await query.order("ID", { ascending: true });
 
       if (error) {
         throw new ScheduleRepositoryError(
@@ -51,7 +55,7 @@ export class SbScheduleRepository implements ScheduleRepository {
     }
   }
 
-  // 전체 스케줄 카테고리 조회
+  // 이하 기존 메서드 유지
   async fetchScheduleCategories(): Promise<ScheduleCategory[]> {
     try {
       const client = await createBrowserSupabaseClient();
@@ -74,7 +78,6 @@ export class SbScheduleRepository implements ScheduleRepository {
     }
   }
 
-  // ID로 특정 스케줄 카테고리 조회
   async fetchScheduleCategoryById(id: number): Promise<ScheduleCategory> {
     try {
       const client = await createBrowserSupabaseClient();
@@ -98,15 +101,13 @@ export class SbScheduleRepository implements ScheduleRepository {
     }
   }
 
-  // 스케줄을 다른 카테고리로 이동
   async moveScheduleToCategory(
+    // ← 인터페이스와 이름 일치
     scheduleId: number,
     newCategoryId: number
   ): Promise<Schedule> {
     try {
       const client = await createBrowserSupabaseClient();
-
-      // 스케줄 존재 여부 확인
       const { data: existingSchedule, error: checkError } = await client
         .from(SbScheduleRepository.SCHEDULE_TABLE)
         .select("*")
@@ -119,7 +120,6 @@ export class SbScheduleRepository implements ScheduleRepository {
         );
       }
 
-      // 스케줄 카테고리 업데이트
       const { data, error } = await client
         .from(SbScheduleRepository.SCHEDULE_TABLE)
         .update({ schedulecategory_id: newCategoryId })
@@ -141,39 +141,9 @@ export class SbScheduleRepository implements ScheduleRepository {
     }
   }
 
-  // 카테고리 이동
-  async moveScheduleCategory(
-    id: number,
-    newCategoryId: number
-  ): Promise<ScheduleCategory[]> {
-    try {
-      const client = await createBrowserSupabaseClient();
-      const { data, error } = await client
-        .from(SbScheduleRepository.CATEGORY_TABLE)
-        .update({ schedule_category_id: newCategoryId })
-        .eq("ID", id)
-        .select("*");
-
-      if (error) {
-        throw new ScheduleRepositoryError(
-          `카테고리 이동 실패 (ID: ${id}): ${error.message}`
-        );
-      }
-
-      return (data ?? []).map(this.toScheduleCategory);
-    } catch (err) {
-      throw new ScheduleRepositoryError(
-        `카테고리 이동 중 오류 발생: ${(err as Error).message}`
-      );
-    }
-  }
-
-  // 스케줄 생성
   async createSchedule(schedule: Schedule): Promise<Schedule> {
     try {
       const client = await createBrowserSupabaseClient();
-
-      // upsert 대신 기본 insert 사용
       const { data, error } = await client
         .from(SbScheduleRepository.SCHEDULE_TABLE)
         .insert({
@@ -199,12 +169,9 @@ export class SbScheduleRepository implements ScheduleRepository {
     }
   }
 
-  // 스케줄 삭제
   async deleteSchedule(userId: string, scheduleId: number): Promise<Schedule> {
     try {
       const client = await createBrowserSupabaseClient();
-
-      // 삭제 전 스케줄 정보 조회 (반환용)
       const { data: existingSchedule, error: checkError } = await client
         .from(SbScheduleRepository.SCHEDULE_TABLE)
         .select("*")
@@ -218,10 +185,9 @@ export class SbScheduleRepository implements ScheduleRepository {
         );
       }
 
-      // 하드 삭제 수행
       const { error } = await client
         .from(SbScheduleRepository.SCHEDULE_TABLE)
-        .delete() // update() 대신 delete() 사용
+        .delete()
         .eq("ID", scheduleId)
         .eq("user_id", userId);
 
@@ -231,7 +197,6 @@ export class SbScheduleRepository implements ScheduleRepository {
         );
       }
 
-      // 삭제된 레코드 정보 반환
       return this.toSchedule(existingSchedule);
     } catch (err) {
       throw new ScheduleRepositoryError(
@@ -240,12 +205,9 @@ export class SbScheduleRepository implements ScheduleRepository {
     }
   }
 
-  // 스케줄 수정
   async updateSchedule(schedule: Schedule): Promise<Schedule> {
     try {
       const client = await createBrowserSupabaseClient();
-
-      // 날짜 포맷 변환
       const updateData = {
         user_id: schedule.userId,
         started_at: schedule.startedAt.toISOString(),
@@ -253,7 +215,6 @@ export class SbScheduleRepository implements ScheduleRepository {
         date: schedule.date.toISOString(),
         deleted_at: schedule.deletedAt?.toISOString() ?? null,
         schedulecategory_id: schedule.scheduleCategoryId,
-        // category: schedule.category,
       };
 
       const { data, error } = await client
@@ -284,8 +245,6 @@ export class SbScheduleRepository implements ScheduleRepository {
   ): Promise<Schedule[]> {
     try {
       const client = await createBrowserSupabaseClient();
-
-      // Date 객체를 ISO 문자열로 변환
       const dateStr = date.toISOString().split("T")[0];
       const startTimeStr = startedAt.toISOString();
 
@@ -295,7 +254,7 @@ export class SbScheduleRepository implements ScheduleRepository {
         .eq("user_id", userId)
         .eq("date", dateStr)
         .eq("started_at", startTimeStr)
-        .is("deleted_at", null); // 삭제되지 않은 항목만
+        .is("deleted_at", null);
 
       if (error) {
         throw new ScheduleRepositoryError(`일정 검색 실패: ${error.message}`);

@@ -57,7 +57,8 @@ interface ChartContainerProps {
   ) => void; // 블럭 크기 조정
   onDeleteBlock: (id: number) => void; // 블럭 삭제
   startHour: number; // 차트 시작 시간 (ex: 9시)
-  onAddBlock: (
+  readOnly?: boolean; // 추가
+  onAddBlock?: (
     type: "휴가" | "외근" | "회의",
     date: string,
     startTime: number
@@ -73,6 +74,7 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
   startHour,
   onAddBlock,
   onMoveBlock,
+  readOnly = false, // 기본값 false
 }) => {
   const today = new Date(); // 오늘 날짜
   const year = today.getFullYear();
@@ -183,6 +185,7 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
                   startHour={startHour}
                   onAddBlock={onAddBlock}
                   onMoveBlock={onMoveBlock}
+                  readOnly={readOnly} // 기본값 false
                 />
               ))}
             </div>

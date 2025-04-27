@@ -6,6 +6,7 @@ import { BlockType } from "@/types/ScheduleType";
 interface BlockContainerProps {
   blocks: BlockType[]; // 전체 블록 리스트
   date: string; // 현재 날짜 (YYYY-MM-DD)
+  readOnly?: boolean;
   startHour: number; // 차트의 시작 시간
   onResizeBlock: (
     id: number,
@@ -25,6 +26,7 @@ const BlockContainer: React.FC<BlockContainerProps> = ({
   onResizeBlock,
   onDeleteBlock,
   onMoveBlock,
+  readOnly = false,
 }) => {
   const CHART_START = 9;
   const CHART_END = 22;
@@ -33,14 +35,14 @@ const BlockContainer: React.FC<BlockContainerProps> = ({
     const blockDate = block.date.slice(0, 10);
     const currentDate = date;
 
-    console.log(
-      "블록 날짜:",
-      blockDate,
-      "현재 날짜:",
-      currentDate,
-      "일치여부:",
-      blockDate === currentDate
-    );
+    // console.log(
+    //   "블록 날짜:",
+    //   blockDate,
+    //   "현재 날짜:",
+    //   currentDate,
+    //   "일치여부:",
+    //   blockDate === currentDate
+    // );
 
     if (blockDate !== currentDate) return false;
 
@@ -48,18 +50,18 @@ const BlockContainer: React.FC<BlockContainerProps> = ({
     const blockEnd = block.startTime + block.duration - 1;
     const visible = block.startTime <= CHART_END && blockEnd >= CHART_START;
 
-    console.log(
-      "블록:",
-      block.id,
-      "표시여부:",
-      visible,
-      "시작시간:",
-      block.startTime,
-      "차트범위:",
-      CHART_START,
-      "-",
-      CHART_END
-    );
+    // console.log(
+    //   "블록:",
+    //   block.id,
+    //   "표시여부:",
+    //   visible,
+    //   "시작시간:",
+    //   block.startTime,
+    //   "차트범위:",
+    //   CHART_START,
+    //   "-",
+    //   CHART_END
+    // );
 
     return visible;
   });
@@ -76,6 +78,7 @@ const BlockContainer: React.FC<BlockContainerProps> = ({
           onResize={onResizeBlock} // 블록 리사이즈 핸들러 전달
           onDelete={onDeleteBlock} // 블록 삭제 핸들러 전달
           onMove={onMoveBlock} // 블록 이동 핸들러 전달 (optional)
+          readOnly={readOnly}
         />
       ))}
     </div>

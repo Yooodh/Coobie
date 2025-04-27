@@ -17,6 +17,7 @@ interface BlockProps {
   ) => boolean | void; // 리사이징 성공 여부 또는 콜백 함수
   onDelete: (id: number) => void; // 삭제 콜백 함수
   onMove?: (id: number, date: string, startTime: number) => void; // 이동 콜백 함수 (드래그 앤 드롭)
+  readOnly?: boolean;
 }
 
 // 실제 일정 블록 UI 컴포넌트
@@ -27,6 +28,7 @@ export default function Block({
   onResize,
   onDelete,
   onMove,
+  readOnly = false,
 }: BlockProps) {
   // 현재 블록의 DOM 엘리먼트에 대한 Ref
   const blockRef = useRef<HTMLDivElement>(null);
@@ -57,6 +59,7 @@ export default function Block({
         dragOffsetY: rect ? rect.top : 0, // 블록 상단 Y 좌표 저장 (드래그 오프셋 계산에 사용)
       };
     },
+    canDrag: !readOnly, // readOnly 시 드래그 비활성화
     collect: (monitor) => ({
       // 드래깅 상태를 감지하여 UI 업데이트에 사용
       isDragging: !!monitor.isDragging(),
@@ -64,21 +67,22 @@ export default function Block({
   }));
 
   // 리사이징 시작 핸들러
-  const handleResizeStart = (
-    e: React.MouseEvent, // 마우스 이벤트 객체
-    direction: "top" | "bottom" // 리사이징 방향
-  ) => {
-    e.stopPropagation(); // 이벤트 버블링 방지
-    e.preventDefault(); // 기본 마우스 동작 방지
-    isResizing.current = direction; // 현재 리사이징 방향 설정
-    startY.current = e.clientY; // 시작 Y 좌표 저장
-    setIsResizingActive(true); // 리사이징 활성화
-    if (blockRef.current) {
-      startHeight.current = blockRef.current.offsetHeight; // 시작 높이 저장
-    }
-    document.addEventListener("mousemove", handleResizing); // 마우스 이동 이벤트 리스너 등록 (리사이징 처리)
-    document.addEventListener("mouseup", handleResizeEnd); // 마우스 업 이벤트 리스너 등록 (리사이징 종료)
-  };
+  // 리사이즈 핸들러 비활성화
+  const handleResizeStart = readOnly
+    ? () => {}
+    : (e: React.MouseEvent, direction: "top" | "bottom") => {
+        if (readOnly) return; // 읽기 전용 모드면 리사이즈 금지
+        e.stopPropagation(); // 이벤트 버블링 방지
+        e.preventDefault(); // 기본 마우스 동작 방지
+        isResizing.current = direction; // 현재 리사이징 방향 설정
+        startY.current = e.clientY; // 시작 Y 좌표 저장
+        setIsResizingActive(true); // 리사이징 활성화
+        if (blockRef.current) {
+          startHeight.current = blockRef.current.offsetHeight; // 시작 높이 저장
+        }
+        document.addEventListener("mousemove", handleResizing); // 마우스 이동 이벤트 리스너 등록 (리사이징 처리)
+        document.addEventListener("mouseup", handleResizeEnd); // 마우스 업 이벤트 리스너 등록 (리사이징 종료)
+      };
 
   // 리사이징 처리 핸들러 (마우스 이동 중)
   const handleResizing = (e: MouseEvent) => {
@@ -163,26 +167,25 @@ export default function Block({
 
   // 블록 더블 클릭 핸들러 (확장 기능)
   const handleDoubleClick = () => {
-    // 휴가 또는 외근 타입의 블록만 확장 가능
     if (block.type !== "휴가" && block.type !== "외근") return;
+    if (readOnly) return;
 
     const chartStartHour = startHour;
-    const chartEndHour = 19;
     let newStartTime = block.startTime;
     let newDuration = block.duration;
-    let nextExpansionState: 0 | 1 | 2 = block.expansionState ?? 0; // 다음 확장 상태
+    let nextExpansionState: 0 | 1 | 2 = block.expansionState ?? 0;
 
-    // 현재 블럭과 같은 날짜의 다른 블럭만 필터링
     const dayBlocks = blocks.filter(
       (b) => b.date === block.date && b.id !== block.id
     );
 
-    // 1단계: 2칸 → 4칸 (가능한 위/아래로 확장)
-    if (block.expansionState === 0 || block.expansionState === undefined) {
-      let up = 0; // 위로 확장 가능한 칸 수
+    console.log(`Current expansion state: ${nextExpansionState}`);
+
+    // 1단계 → 2단계 (2칸 → 4칸)
+    if (nextExpansionState === 0) {
+      let up = 0;
       for (let i = 1; i <= 2; i++) {
         const testStart = block.startTime - i;
-        // 스케줄 표 시작 시간보다 이전이거나, 다른 블록과 겹치면 중단
         if (
           testStart < chartStartHour ||
           isOverlapping(dayBlocks, block.date, testStart, block.duration)
@@ -190,31 +193,24 @@ export default function Block({
           break;
         up++;
       }
-      let down = 0; // 아래로 확장 가능한 칸 수
+
+      let down = 0;
       for (let i = 1; i <= 2; i++) {
         const testStart = block.startTime + i;
-        // 스케줄 표 종료 시간 이후이거나, 다른 블록과 겹치면 중단
         if (
           testStart + block.duration - 1 >= chartEndHour ||
-          isOverlapping(
-            dayBlocks,
-            block.date,
-            block.startTime + down + 1,
-            block.duration
-          )
+          isOverlapping(dayBlocks, block.date, testStart, block.duration)
         )
           break;
         down++;
       }
-      // 최대 2칸까지 위/아래로 확장
-      let addUp = Math.min(2, up);
-      let addDown = Math.min(2 - addUp, down);
-      newStartTime = block.startTime - addUp;
-      newDuration = block.duration + addUp + addDown;
+
+      newStartTime = block.startTime - up;
+      newDuration = block.duration + up + down;
       nextExpansionState = 1;
     }
-    // 2단계: 4칸 → 위/아래 최대 확장
-    else if (block.expansionState === 1) {
+    // 2단계 → 3단계 (4칸 → 전체 확장)
+    else if (nextExpansionState === 1) {
       let up = 0;
       for (let i = 1; block.startTime - i >= chartStartHour; i++) {
         if (
@@ -228,10 +224,11 @@ export default function Block({
           break;
         up++;
       }
+
       let down = 0;
       for (
         let i = 1;
-        block.startTime + block.duration - 1 + i < chartEndHour;
+        block.startTime + block.duration + i - 1 < chartEndHour;
         i++
       ) {
         if (
@@ -245,12 +242,13 @@ export default function Block({
           break;
         down++;
       }
+
       newStartTime = block.startTime - up;
       newDuration = block.duration + up + down;
       nextExpansionState = 2;
     }
-    // 3단계: 전체 → 2칸(초기)
-    else if (block.expansionState === 2) {
+    // 3단계 → 1단계 (전체 → 2칸)
+    else {
       newStartTime = Math.max(
         chartStartHour,
         Math.min(block.startTime, chartEndHour - 2)
@@ -259,15 +257,15 @@ export default function Block({
       nextExpansionState = 0;
     }
 
-    // 최종 겹침 체크
+    // 최종 검증
     if (
       isOverlapping(blocks, block.date, newStartTime, newDuration, block.id)
     ) {
-      toast.error("다른 일정이 있어 크기 변경이 불가합니다!");
+      toast.error("다른 일정이 있어 확장할 수 없습니다!");
       return;
     }
 
-    // onResize 콜백 호출하여 블록 크기 및 확장 상태 업데이트
+    console.log(`New expansion state: ${nextExpansionState}`);
     onResize(block.id, newDuration, newStartTime, nextExpansionState);
   };
 
@@ -287,43 +285,50 @@ export default function Block({
         backgroundColor: block.color, // 블록 색상
         transition: isResizingActive ? "none" : "all 0.2s ease", // 리사이징 중에는 transition 비활성화
         opacity: isDragging ? 0.5 : 1, // 드래깅 중 투명도 조절
+        cursor: readOnly ? "default" : "grab", // 커서 스타일 변경
       }}
-      onDoubleClick={handleDoubleClick} // 더블 클릭 시 확장 기능 실행
+      onDoubleClick={readOnly ? undefined : handleDoubleClick} // 더블클릭 비활성화
     >
-      {/* 상단 리사이즈 핸들 */}
-      <div
-        className="absolute top-0 left-0 right-0 h-3 cursor-ns-resize z-20 
-          before:content-[''] before:absolute before:top-1 before:left-1/2 before:-translate-x-1/2 
-          before:w-16 before:h-1 before:bg-white before:opacity-40 before:rounded-full 
-          hover:bg-black hover:bg-opacity-10"
-        onMouseDown={(e) => handleResizeStart(e, "top")} // 마우스 다운 시 위쪽 리사이징 시작
-      />
+      {/* 상단 리사이즈 핸들 (읽기 전용 시 숨김) */}
+      {!readOnly && (
+        <div
+          className="absolute top-0 left-0 right-0 h-3 cursor-ns-resize z-20 
+            before:content-[''] before:absolute before:top-1 before:left-1/2 before:-translate-x-1/2 
+            before:w-16 before:h-1 before:bg-white before:opacity-40 before:rounded-full 
+            hover:bg-black hover:bg-opacity-10"
+          onMouseDown={(e) => handleResizeStart(e, "top")}
+        />
+      )}
       {/* 블록 내용 */}
       <div className="flex flex-col justify-between h-full px-3 py-1">
         <div className="flex justify-between items-center">
-          <span className="font-bold text-white truncate">{block.type}</span>{" "}
-          {/* 블록 타입 표시 */}
-          <button
-            className="text-white text-xl opacity-70 hover:opacity-100 transition-opacity"
-            onClick={() => onDelete(block.id)} // 삭제 버튼 클릭 시 onDelete 콜백 호출
-          >
-            ×
-          </button>
+          <span className="font-bold text-white truncate">{block.type}</span>
+          {/* 삭제 버튼 (읽기 전용 시 숨김) */}
+          {!readOnly && (
+            <button
+              className="text-white text-xl opacity-70 hover:opacity-100 transition-opacity"
+              onClick={() => onDelete(block.id)}
+            >
+              ×
+            </button>
+          )}
         </div>
         <div className="text-white text-sm opacity-80">
-          {formatTime(block.startTime)} - {/* 시작 시간 표시 */}
-          {formatTime(block.startTime + block.duration - 1)}{" "}
-          {/* 종료 시간 표시 */}
+          {formatTime(block.startTime)} -{" "}
+          {formatTime(block.startTime + block.duration - 1)}
         </div>
       </div>
-      {/* 하단 리사이즈 핸들 */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-20
-          before:content-[''] before:absolute before:bottom-1 before:left-1/2 before:-translate-x-1/2 
-          before:w-16 before:h-1 before:bg-white before:opacity-40 before:rounded-full
-          hover:bg-black hover:bg-opacity-10"
-        onMouseDown={(e) => handleResizeStart(e, "bottom")} // 마우스 다운 시 아래쪽 리사이징 시작
-      />
+
+      {/* 하단 리사이즈 핸들 (읽기 전용 시 숨김) */}
+      {!readOnly && (
+        <div
+          className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-20
+            before:content-[''] before:absolute before:bottom-1 before:left-1/2 before:-translate-x-1/2 
+            before:w-16 before:h-1 before:bg-white before:opacity-40 before:rounded-full
+            hover:bg-black hover:bg-opacity-10"
+          onMouseDown={(e) => handleResizeStart(e, "bottom")}
+        />
+      )}
     </div>
   );
 }

@@ -13,13 +13,14 @@ export class FetchSchedulesError extends Error {
 }
 
 export async function fetchSchedulesUseCase(
-  repository: ScheduleRepository
+  repository: ScheduleRepository,
+  userId?: string // 추가된 파라미터
 ): Promise<FetchSchedulesDto[]> {
   try {
     // 로깅 추가 (개발/디버깅용)
     console.log("[FetchSchedules] 시작: 스케줄 목록 조회");
 
-    const schedules = await repository.fetchSchedules();
+    const schedules = await repository.fetchSchedules(userId); // userId 전달
 
     // 도메인 엔티티를 DTO로 변환
     const scheduleDtos = schedules.map(toFetchSchedulesDto);

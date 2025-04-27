@@ -1,34 +1,35 @@
 "use client";
 
 import React, { useRef } from "react";
+import BlockContainer from "./BlockContainer";
 import { BlockType } from "@/types/ScheduleType";
 import { useDrop } from "react-dnd";
-import BlockContainer from "./BlockContainer";
 import { toast } from "react-toastify";
 import { isOverlapping } from "@/utils/schedule";
 
 interface ChartProps {
-  blocks: BlockType[]; // 전체 블록 리스트
+  blocks: BlockType[];
+  readOnly?: boolean;
   onResizeBlock: (
     id: number,
     newDuration: number,
     newStartTime?: number,
     expansionState?: 0 | 1 | 2
-  ) => void; // 블록 리사이즈 이벤트 핸들러
-  onDeleteBlock: (id: number) => void; // 블록 삭제 이벤트 핸들러
-  date: Date; // 현재 날짜
-  startHour: number; // 차트의 시작 시간
+  ) => void;
+  onDeleteBlock: (id: number) => void;
+  date: Date;
+  startHour: number;
   onAddBlock?: (
     type: "휴가" | "외근" | "회의",
     date: string,
     startTime: number
-  ) => void; // 블록 추가 핸들러 (optional)
+  ) => void;
   onMoveBlock?: (
     id: number,
     date: string,
     startTime: number,
     duration?: number
-  ) => void; // 블록 이동 핸들러 (optional)
+  ) => void;
 }
 
 const Chart: React.FC<ChartProps> = ({
@@ -39,20 +40,22 @@ const Chart: React.FC<ChartProps> = ({
   startHour,
   onAddBlock,
   onMoveBlock,
+  readOnly = false,
 }) => {
-  const dropRef = useRef<HTMLDivElement>(null); // 드롭 영역 레퍼런스
+  const dropRef = useRef<HTMLDivElement>(null);
 
   // 드롭 핸들러
   const handleDrop = (item: any, monitor: any) => {
-    const clientOffset = monitor.getClientOffset(); // 현재 마우스 위치
+    if (readOnly) return; // 읽기 전용 모드면 동작 중지
+    const clientOffset = monitor.getClientOffset();
     if (!clientOffset || !dropRef.current) return;
 
-    // 날짜를 YYYY-MM-DD 포맷으로 변환
+    // 날짜 포맷
     const dateString = `${date.getFullYear()}-${String(
       date.getMonth() + 1
     ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
-    // 드래그 시작 위치와 드래그 원본 위치 차이를 계산
+    // 드래그 시작 위치와 드래그 원본 위치 차이 계산
     const initialClientOffset = monitor.getInitialClientOffset();
     const initialSourceClientOffset = monitor.getInitialSourceClientOffset();
     const dragOffsetY =
@@ -65,7 +68,7 @@ const Chart: React.FC<ChartProps> = ({
     const hoverBoundingRect = dropRef.current.getBoundingClientRect();
     const hoverY = blockTopPosition - hoverBoundingRect.top;
 
-    const hourHeight = 60; // 한 시간당 높이 (60px)
+    const hourHeight = 60;
     const dropHour = Math.floor(hoverY / hourHeight);
     let dropStartTime = Math.max(startHour, startHour + dropHour);
 
@@ -75,9 +78,7 @@ const Chart: React.FC<ChartProps> = ({
     if (item.duration) duration = item.duration;
     if (item.id) exceptBlockId = item.id;
 
-    const chartEndHour = 19; // 차트 끝 시간
-
-    // 드롭 시간이 차트 범위를 넘는 경우 처리
+    const chartEndHour = 19;
     if (dropStartTime + duration > chartEndHour) {
       dropStartTime = chartEndHour - duration;
       if (dropStartTime < startHour) {
@@ -86,12 +87,12 @@ const Chart: React.FC<ChartProps> = ({
       }
     }
 
-    // 같은 날짜의 블록들만 필터링
+    // 같은 날짜 블록만 필터링
     const sameDate = (blocks || []).filter(
       (block) => block.date === dateString
     );
 
-    // 겹치는지 확인
+    // 겹침 체크
     const overlap = isOverlapping(
       sameDate,
       dateString,
@@ -99,7 +100,6 @@ const Chart: React.FC<ChartProps> = ({
       duration,
       exceptBlockId
     );
-
     if (overlap) {
       toast.error("이미 블럭이 존재하는 시간대입니다!");
       return;
@@ -107,25 +107,25 @@ const Chart: React.FC<ChartProps> = ({
 
     // 새 블록 추가 또는 기존 블록 이동
     if (item.type && ["휴가", "외근", "회의"].includes(item.type)) {
-      onAddBlock?.(item.type, dateString, dropStartTime);
+      onAddBlock?.(item.type, dateString, dropStartTime); // Optional chaining 사용
     } else if (item.id && onMoveBlock) {
       onMoveBlock(item.id, dateString, dropStartTime);
     }
   };
 
-  // useDrop 훅 설정
+  // useDrop 훅
   const [{ isOver }, drop] = useDrop({
-    accept: ["block", "block-instance"], // 허용하는 드래그 타입
-    drop: handleDrop, // 드롭 핸들러 연결
+    accept: ["block", "block-instance"],
+    drop: handleDrop,
     collect: (monitor) => ({
-      isOver: !!monitor.isOver(), // 드롭 오버 상태 수집
+      isOver: !!monitor.isOver(),
     }),
   });
 
-  // 시간 라벨 배열 (시작 시간부터 10시간)
+  // 시간 라벨
   const timeLabels = Array.from({ length: 10 }, (_, i) => startHour + i);
 
-  // 날짜 포맷 변환 (ex: 04.26(금))
+  // 날짜 포맷 (ex: 04.26(금))
   const formatDate = (date: Date) => {
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
@@ -134,7 +134,7 @@ const Chart: React.FC<ChartProps> = ({
     return `${month}.${day}(${weekDay})`;
   };
 
-  // 드롭 ref와 useDrop ref를 함께 연결하는 함수
+  // ref 합성
   const combineRefs = (el: HTMLDivElement | null) => {
     drop(el);
     dropRef.current = el;
@@ -145,10 +145,14 @@ const Chart: React.FC<ChartProps> = ({
     date.getMonth() + 1
   ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
+  // 리사이즈 핸들러 비활성화
+  const handleResize = readOnly ? () => {} : onResizeBlock;
+  const handleDelete = readOnly ? () => {} : onDeleteBlock;
+
   return (
     <div
       className={`border border-gray-200 w-full h-full transition-colors duration-200 
-        ${isOver ? "bg-blue-100 border-blue-300" : "bg-white"}`} // 드롭 오버 시 색상 변경
+        ${isOver ? "bg-blue-100 border-blue-300" : "bg-white"}`}
     >
       {/* 상단 날짜 표시 */}
       <div className="text-center p-2 border-b border-gray-200 text-lg font-medium text-gray-400">
@@ -159,9 +163,9 @@ const Chart: React.FC<ChartProps> = ({
       <div
         ref={combineRefs}
         className="relative overflow-hidden"
-        style={{ height: `${timeLabels.length * 60}px` }} // 차트 높이 계산
+        style={{ height: `${timeLabels.length * 60}px` }}
       >
-        {/* 시간 라인 렌더링 */}
+        {/* 시간 라인 */}
         {timeLabels.map((hour, index) => (
           <div
             key={hour}
@@ -171,7 +175,7 @@ const Chart: React.FC<ChartProps> = ({
                   ? "border-b border-gray-200"
                   : ""
               }`}
-            style={{ top: `${index * 60}px` }} // 시간 라인의 위치
+            style={{ top: `${index * 60}px` }}
           >
             <span className="text-sm pl-2 text-gray-400">
               {hour < 12
@@ -181,13 +185,13 @@ const Chart: React.FC<ChartProps> = ({
           </div>
         ))}
 
-        {/* 블록 컨테이너 렌더링 */}
+        {/* 블록 컨테이너 */}
         <BlockContainer
           blocks={blocks}
           date={dateString}
           startHour={startHour}
-          onResizeBlock={onResizeBlock}
-          onDeleteBlock={onDeleteBlock}
+          onResizeBlock={handleResize}
+          onDeleteBlock={handleDelete}
           onMoveBlock={onMoveBlock}
         />
       </div>
