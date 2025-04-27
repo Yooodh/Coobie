@@ -4,10 +4,14 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/app/components/common/Header";
-import ProfileImage from "@/app/components/user/ProfileImage";
+import ProfileImage from "@/app/components/common/ProfileImage";
 import { UserDto } from "@/application/usecases/user/dto/UserDto";
 
-export default function ViewUserProfile({ params }: { params: { id: string } }) {
+export default function ViewUserProfile({
+  params,
+}: {
+  params: { id: string };
+}) {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UserDto | null>(null);
   const [viewedUser, setViewedUser] = useState<UserDto | null>(null);
@@ -23,19 +27,19 @@ export default function ViewUserProfile({ params }: { params: { id: string } }) 
         // 부서 및 직급 정보 가져오기
         const [deptResponse, posResponse] = await Promise.all([
           fetch("/api/departments"),
-          fetch("/api/positions")
+          fetch("/api/positions"),
         ]);
-        
+
         const departments = deptResponse.ok ? await deptResponse.json() : [];
         const positions = posResponse.ok ? await posResponse.json() : [];
-        
+
         // 부서명과 직급명 매핑 함수
         const getDepartmentName = (deptId?: number) => {
           if (!deptId) return undefined;
           const dept = departments.find((d: any) => d.id === deptId);
           return dept?.departmentName;
         };
-        
+
         const getPositionName = (posId?: number) => {
           if (!posId) return undefined;
           const pos = positions.find((p: any) => p.id === posId);
@@ -47,9 +51,9 @@ export default function ViewUserProfile({ params }: { params: { id: string } }) 
         if (!currentUserResponse.ok) {
           throw new Error("사용자 정보를 불러오는데 실패했습니다");
         }
-        
+
         const currentUserData = await currentUserResponse.json();
-        
+
         const currentUserDto: UserDto = {
           id: currentUserData.user.id,
           username: currentUserData.user.username,
@@ -58,9 +62,9 @@ export default function ViewUserProfile({ params }: { params: { id: string } }) 
           positionId: currentUserData.user.positionId,
           departmentName: getDepartmentName(currentUserData.user.departmentId),
           positionName: getPositionName(currentUserData.user.positionId),
-          status: currentUserData.user.status || "online"
+          status: currentUserData.user.status || "online",
         };
-        
+
         setCurrentUser(currentUserDto);
 
         // 조회 대상 사용자가 현재 사용자와 동일한 경우
@@ -74,9 +78,9 @@ export default function ViewUserProfile({ params }: { params: { id: string } }) 
         if (!viewedUserResponse.ok) {
           throw new Error("사용자 정보를 불러오는데 실패했습니다");
         }
-        
+
         const viewedUserData = await viewedUserResponse.json();
-        
+
         const viewedUserDto: UserDto = {
           id: viewedUserData.id,
           username: viewedUserData.username,
@@ -86,24 +90,26 @@ export default function ViewUserProfile({ params }: { params: { id: string } }) 
           departmentName: getDepartmentName(viewedUserData.departmentId),
           positionName: getPositionName(viewedUserData.positionId),
           status: viewedUserData.status || "offline",
-          profileMessage: viewedUserData.profileMessage
+          profileMessage: viewedUserData.profileMessage,
         };
-        
+
         setViewedUser(viewedUserDto);
       } catch (err: any) {
-        setError(err.message || "사용자 정보를 불러오는 중 오류가 발생했습니다");
+        setError(
+          err.message || "사용자 정보를 불러오는 중 오류가 발생했습니다"
+        );
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchData();
   }, [params.id, router]);
 
   // 채팅 시작
   const startChat = async () => {
     if (!currentUser || !viewedUser) return;
-    
+
     // 채팅 시작 로직
     try {
       const response = await fetch("/api/chattings", {
@@ -116,13 +122,13 @@ export default function ViewUserProfile({ params }: { params: { id: string } }) 
           name: viewedUser.nickname,
         }),
       });
-      
+
       if (!response.ok) {
         throw new Error("채팅 방 생성에 실패했습니다");
       }
-      
+
       const data = await response.json();
-      
+
       // 채팅 페이지로 이동
       router.push(`/chatting?roomId=${data.newChatRoom.id}`);
     } catch (err) {
@@ -155,8 +161,8 @@ export default function ViewUserProfile({ params }: { params: { id: string } }) 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 헤더 */}
-      <Header 
-        username={currentUser.nickname} 
+      <Header
+        username={currentUser.nickname}
         userId={currentUser.id}
         userStatus={currentUser.status}
       />
@@ -165,43 +171,53 @@ export default function ViewUserProfile({ params }: { params: { id: string } }) 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white shadow rounded-lg overflow-hidden">
           {/* 프로필 헤더 */}
-          <div className="bg-amber-500 h-32 relative">
-            {/* 배경 이미지 */}
-          </div>
+          <div className="bg-amber-500 h-32 relative">{/* 배경 이미지 */}</div>
 
           {/* 프로필 정보 */}
           <div className="px-6 py-4 flex flex-col items-center -mt-16">
             {/* 프로필 이미지 */}
             <div className="relative">
-              <ProfileImage 
+              <ProfileImage
                 userId={viewedUser.id}
                 size={120}
                 showStatus={true}
                 status={viewedUser.status}
               />
             </div>
-            
+
             <h1 className="text-2xl font-bold mt-4">{viewedUser.nickname}</h1>
-            
+
             <div className="text-gray-600 mb-2">
               {viewedUser.departmentName && viewedUser.positionName
                 ? `${viewedUser.departmentName} / ${viewedUser.positionName}`
-                : viewedUser.departmentName || viewedUser.positionName || "부서/직급 미지정"}
+                : viewedUser.departmentName ||
+                  viewedUser.positionName ||
+                  "부서/직급 미지정"}
             </div>
-            
+
             <div className="flex items-center text-sm text-gray-500 mb-4">
-              <div className={`w-3 h-3 rounded-full mr-2 ${
-                viewedUser.status === "online" ? "bg-green-500" :
-                viewedUser.status === "busy" ? "bg-red-500" :
-                viewedUser.status === "away" ? "bg-yellow-500" : "bg-gray-400"
-              }`}></div>
+              <div
+                className={`w-3 h-3 rounded-full mr-2 ${
+                  viewedUser.status === "online"
+                    ? "bg-green-500"
+                    : viewedUser.status === "busy"
+                    ? "bg-red-500"
+                    : viewedUser.status === "away"
+                    ? "bg-yellow-500"
+                    : "bg-gray-400"
+                }`}
+              ></div>
               <span>
-                {viewedUser.status === "online" ? "온라인" :
-                viewedUser.status === "busy" ? "방해 금지" :
-                viewedUser.status === "away" ? "자리 비움" : "오프라인"}
+                {viewedUser.status === "online"
+                  ? "온라인"
+                  : viewedUser.status === "busy"
+                  ? "방해 금지"
+                  : viewedUser.status === "away"
+                  ? "자리 비움"
+                  : "오프라인"}
               </span>
             </div>
-            
+
             {/* 프로필 메시지 */}
             {viewedUser.profileMessage && (
               <div className="w-full max-w-md mb-6">
@@ -213,7 +229,7 @@ export default function ViewUserProfile({ params }: { params: { id: string } }) 
                 </div>
               </div>
             )}
-            
+
             {/* 채팅 시작 버튼 */}
             <div className="w-full max-w-md">
               <button
