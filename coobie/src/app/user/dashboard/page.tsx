@@ -40,7 +40,7 @@ export default function UserDashboard() {
       if (!currentUser?.businessNumber) return;
 
       const usersResponse = await fetch(
-        `/api/users?roleId=02&businessNumber=${currentUser.businessNumber}`
+        `/api/users?roleId=02&businessNumber=${currentUser.businessNumber}&limit=1000`
       );
       if (!usersResponse.ok) {
         throw new Error("사용자 목록을 불러오는데 실패했습니다");
@@ -59,9 +59,11 @@ export default function UserDashboard() {
         profileMessage: user.profileMessage,
       }));
 
-      setUsers(userDtos);
-      setFilteredUsers(userDtos);
-      console.log("유저 페칭:",usersData.users);
+      const filteredUserDtos = userDtos.filter((user: UserDto)=>user.id !== currentUser.id)
+
+      setUsers(filteredUserDtos);
+      setFilteredUsers(filteredUserDtos);
+      console.log("유저 페칭:", filteredUserDtos.length, "명");
     } catch (err) {
       console.error("사용자 목록 업데이트 중 오류 발생:", err);
     }
