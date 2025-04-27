@@ -1,5 +1,6 @@
 "use client";
 
+import { createBrowserSupabaseClient } from "@/utils/supabase/client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import UserCard from "@/app/components/user/UserCard";
@@ -9,6 +10,7 @@ import { DepartmentDto, PositionDto } from "@/application/usecases/dto";
 
 export default function UserDashboard() {
   const router = useRouter();
+  const supabase = createBrowserSupabaseClient();
   const [currentUser, setCurrentUser] = useState<UserDto | null>(null);
   const [users, setUsers] = useState<UserDto[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserDto[]>([]);
@@ -35,7 +37,6 @@ export default function UserDashboard() {
   };
 
   const fetchUsers = async () => {
-
     try {
       if (!currentUser?.businessNumber) return;
 
@@ -59,7 +60,9 @@ export default function UserDashboard() {
         profileMessage: user.profileMessage,
       }));
 
-      const filteredUserDtos = userDtos.filter((user: UserDto)=>user.id !== currentUser.id)
+      const filteredUserDtos = userDtos.filter(
+        (user: UserDto) => user.id !== currentUser.id
+      );
 
       setUsers(filteredUserDtos);
       setFilteredUsers(filteredUserDtos);
@@ -67,7 +70,6 @@ export default function UserDashboard() {
     } catch (err) {
       console.error("사용자 목록 업데이트 중 오류 발생:", err);
     }
-    
   };
 
   // 초기 데이터 로딩
@@ -133,7 +135,6 @@ export default function UserDashboard() {
   useEffect(() => {
     if (!currentUser) return;
     fetchUsers();
-    
   }, [currentUser]);
 
   // 주기적으로 사용자 목록 업데이트

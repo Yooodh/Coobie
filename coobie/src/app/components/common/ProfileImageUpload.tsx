@@ -7,6 +7,7 @@ import { ProfileImageDto } from "@/application/usecases/profileImage/dto/Profile
 interface ProfileImageUploadProps {
   userId: string;
   initialImage?: ProfileImageDto | null;
+  currentImageUrl?: string;
   onImageChange?: (image: ProfileImageDto | null) => void;
   className?: string;
   size?: number;

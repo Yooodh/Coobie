@@ -7,6 +7,7 @@ import Header from "@/app/components/common/Header";
 import ProfileImageUpload from "@/app/components/common/ProfileImageUpload";
 import { UserDto } from "@/application/usecases/user/dto/UserDto";
 import { DepartmentDto, PositionDto } from "@/application/usecases/dto";
+import { ProfileImageDto } from "@/application/usecases/profileImage/dto/ProfileImageDto";
 
 export default function UserProfile() {
   const router = useRouter();
@@ -154,11 +155,11 @@ export default function UserProfile() {
   };
 
   // 프로필 이미지 변경 처리
-  const handleImageChange = (newImageUrl: string | null) => {
+  const handleImageChange = (newImageUrl: ProfileImageDto | null) => {
     if (user) {
       setUser({
         ...user,
-        profileImageUrl: newImageUrl || undefined,
+        profileImageUrl: newImageUrl?.fileUrl || undefined,
       });
     }
   };
