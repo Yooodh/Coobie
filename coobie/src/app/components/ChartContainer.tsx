@@ -23,7 +23,7 @@ function getMonthWeeks(year: number, month: number) {
 
   // 마지막 주의 일요일로 이동
   const lastDayOfWeek = lastDate.getDay();
-  const end =
+  let end =
     lastDayOfWeek === 0
       ? new Date(lastDate)
       : new Date(
@@ -31,6 +31,9 @@ function getMonthWeeks(year: number, month: number) {
           lastDate.getMonth(),
           lastDate.getDate() + (7 - lastDayOfWeek)
         );
+
+  // *** 여기가 핵심: 마지막 주 이후 2주(14일) 추가 ***
+  end.setDate(end.getDate() + 14);
 
   const weeks: Date[][] = [];
   let current = new Date(start);
@@ -120,11 +123,44 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
 
   return (
     <div className="relative w-full">
-      {/* '이번주' 버튼 */}
+      {/* 이번주 버튼 (오른쪽 아래) */}
       <button
         onClick={handleGoToThisWeek}
-        className="fixed right-8 bottom-24 z-50 bg-gray-200 text-gray-800 rounded px-4 py-2 shadow"
+        className="
+    fixed bottom-8 right-8 z-50
+    bg-white text-blue-500 font-semibold
+    rounded-full shadow-lg
+    px-3 py-2 
+    hover:bg-blue-100 hover:text-blue-700 hover:shadow-xl hover:-translate-y-0.5
+    border border-blue-100
+    transition-all duration-150
+    text-base
+    ring-1 ring-blue-100
+    active:scale-95
+    cursor-pointer
+  "
+        style={{
+          letterSpacing: "0.05em",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+        }}
       >
+        <svg
+          className="inline-block mr-1.5 -mt-1"
+          width="20"
+          height="20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          style={{ verticalAlign: "middle" }}
+        >
+          <circle cx="10" cy="10" r="8" stroke="currentColor" />
+          <polyline
+            points="10,5 10,10 13,12"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
         이번주
       </button>
 
@@ -132,7 +168,7 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
       <button
         aria-label="이전 주"
         onClick={handlePrev}
-        className="fixed left-8 top-1/2 bottom-24 z-50 flex items-center justify-center w-10 h-10 rounded-full bg-white shadow hover:bg-blue-100 hover:scale-110 transition-all duration-150 focus:outline-none"
+        className="fixed left-8 top-1/2 bottom-24 z-50 flex items-center justify-center w-10 h-10 rounded-full bg-white shadow hover:bg-blue-100 hover:scale-110 transition-all duration-150 focus:outline-none cursor-pointer"
       >
         <svg
           width="24"
@@ -149,7 +185,7 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
       <button
         aria-label="다음 주"
         onClick={handleNext}
-        className="fixed right-8 top-1/2 z-50 flex items-center justify-center w-10 h-10 rounded-full bg-white shadow hover:bg-blue-100 hover:scale-110 transition-all duration-150 focus:outline-none"
+        className="fixed right-8 top-1/2 z-50 flex items-center justify-center w-10 h-10 rounded-full bg-white shadow hover:bg-blue-100 hover:scale-110 transition-all duration-150 focus:outline-none cursor-pointer"
       >
         <svg
           width="24"
