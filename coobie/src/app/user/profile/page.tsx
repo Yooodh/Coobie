@@ -19,40 +19,50 @@ export default function UserProfile() {
   const [profileMessage, setProfileMessage] = useState("");
   const [isEditingMessage, setIsEditingMessage] = useState(false);
 
+  // 부서 및 직급 관련 상태 추가
+  const [departments, setDepartments] = useState<DepartmentDto[]>([]);
+  const [positions, setPositions] = useState<PositionDto[]>([]);
+
   // 현재 사용자 정보 가져오기
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        const response = await fetch("/api/auth/me");
 
-        if (!response.ok) {
-          throw new Error("사용자 정보를 불러오는데 실패했습니다");
-        }
-
-        const userData = await response.json();
-
-        // 부서 및 직급 정보 가져오기
-        const [deptResponse, posResponse] = await Promise.all([
+        // 부서 및 직급 먼저 가져오기
+        const [departmentsResponse, positionsResponse] = await Promise.all([
           fetch("/api/departments"),
           fetch("/api/positions"),
         ]);
 
-        const departments = deptResponse.ok ? await deptResponse.json() : [];
-        const positions = posResponse.ok ? await posResponse.json() : [];
+        const response2 = await fetch("/api/auth/me");
+        const userData2 = await response2.json();
 
-        // 부서명과 직급명 매핑
-        const getDepartmentName = (deptId?: number) => {
-          if (!deptId) return undefined;
-          const dept = departments.find((d: DepartmentDto) => d.id === deptId);
-          return dept?.departmentName;
-        };
+        const departmentsData = departmentsResponse.ok
+          ? await departmentsResponse.json()
+          : [];
+        const positionsData = positionsResponse.ok
+          ? await positionsResponse.json()
+          : [];
 
-        const getPositionName = (posId?: number) => {
-          if (!posId) return undefined;
-          const pos = positions.find((p: PositionDto) => p.id === posId);
-          return pos?.positionName;
-        };
+        setDepartments(departmentsData);
+        setPositions(positionsData);
+
+        // 사용자 정보 가져오기
+        const response = await fetch("/api/auth/me");
+        if (!response.ok) {
+          throw new Error("사용자 정보를 불러오는데 실패했습니다");
+        }
+        const userData = await response.json();
+
+        // 부서명과 직급명 찾기
+        const departmentName = departmentsData.find(
+          (d: DepartmentDto) => d.id === userData.user.departmentId
+        )?.departmentName;
+
+        const positionName = positionsData.find(
+          (p: PositionDto) => p.id === userData.user.positionId
+        )?.positionName;
 
         // 사용자 정보 매핑
         const userDto: UserDto = {
@@ -61,15 +71,17 @@ export default function UserProfile() {
           nickname: userData.user.nickname,
           departmentId: userData.user.departmentId,
           positionId: userData.user.positionId,
-          departmentName: getDepartmentName(userData.user.departmentId),
-          positionName: getPositionName(userData.user.positionId),
+          departmentName: departmentName,
+          positionName: positionName,
           status: userData.user.status || "online",
           profileMessage: userData.user.profileMessage || "",
+          businessNumber: userData.user.businessNumber,
         };
 
         setUser(userDto);
         setUserStatus(userDto.status || "online");
         setProfileMessage(userDto.profileMessage || "");
+        console.log("사용자 정보 설정 완료:", userDto);
       } catch (err) {
         if (err instanceof Error) {
           setError(
@@ -190,7 +202,6 @@ export default function UserProfile() {
 
           {/* 프로필 정보 */}
           <div className="px-6 py-4 flex flex-col items-center -mt-16">
-            {/* 프로필 이미지 업로드 */}
             <ProfileImageUpload
               userId={user.id}
               currentImageUrl={user.profileImageUrl}

@@ -58,6 +58,8 @@ export async function GET(request: NextRequest) {
       nickname: user.nickname,
       roleId: user.roleId,
       businessNumber: user.businessNumber,
+      departmentId: user.departmentId,
+      positionId: user.positionId,    
     };
 
     return NextResponse.json({
