@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SbUserRepository } from "@/infra/repositories/supabase/SbUserRepository";
-import { GetUserUseCase } from "@/application/usecases/user/GetUserUsecase";
+import { GetUserUseCase } from "@/application/usecases/user/GetUserUseCase";
 import { UpdateUserUseCase } from "@/application/usecases/user/UpdateUserUseCase";
 import { DeleteUserUseCase } from "@/application/usecases/user/DeleteUserUseCase";
 
