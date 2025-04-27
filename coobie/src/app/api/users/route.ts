@@ -33,7 +33,7 @@ function getErrorMessage(error: unknown): string {
   return toErrorWithMessage(error).message;
 }
 
-// GET 핸들러 (사용자 목록 조회) - 변경 없음
+// GET 핸들러 (사용자 목록 조회)
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
       roleId,
       isLocked,
       isApproved,
-      businessNumber, // 이 값이 올바르게 전달되는지 확인
+      businessNumber,
     });
 
     // 필터 객체 생성 후

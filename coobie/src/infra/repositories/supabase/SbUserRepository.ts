@@ -341,13 +341,14 @@ export class SbUserRepository implements UserRepository {
       data.password,
       data.is_locked,
       new Date(data.created_at),
-      data.is_approved,
+    data.is_approved,
       data.notification_on,
       data.role_id,
       data.business_number,
       data.deleted_at ? new Date(data.deleted_at) : undefined,
       data.department_id,
-      data.position_id
+      data.position_id,
+      data.status ?? "offline" // ✨ 추가: 상태값 매핑
     );
   }
 }

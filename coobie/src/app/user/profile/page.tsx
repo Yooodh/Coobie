@@ -270,10 +270,10 @@ export default function UserProfile() {
             {/* 스케줄 관리 링크 */}
             <div className="w-full max-w-md">
               <button
-                onClick={() => router.push("/user/schedule")}
+                onClick={() => router.push("/user/dashboard")}
                 className="w-full py-3 px-4 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
               >
-                내 스케줄 관리하기
+                프로필 저장
               </button>
             </div>
           </div>

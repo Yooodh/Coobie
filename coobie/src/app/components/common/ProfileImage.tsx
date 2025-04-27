@@ -32,7 +32,6 @@ export default function ProfileImage({
   const fetchProfileImage = async () => {
     try {
       setLoading(true);
-      // 올바른 API 엔드포인트 사용
       const response = await fetch(`/api/users/profile-image?userId=${userId}`);
       
       if (response.ok) {

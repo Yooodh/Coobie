@@ -4,4 +4,5 @@ export interface AuthUserDto {
   nickname: string;
   roleId: string;
   businessNumber?: string;
+  status?: "online" | "offline" | "busy" | "away";
 }

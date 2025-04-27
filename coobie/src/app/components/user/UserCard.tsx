@@ -19,7 +19,7 @@ function UserCard({ user }: UserCardProps) {
             userId={user.id}
             size={64}
             showStatus={true}
-            status="offline" // 실제로는 사용자 상태에 따라 동적으로 설정
+            status={user.status}
           />
 
           <div className="ml-4 flex-1">
@@ -35,7 +35,13 @@ function UserCard({ user }: UserCardProps) {
                 </div>
               </div>
               <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-800">
-                오프라인
+                {user.status === "online"
+                  ? "온라인"
+                  : user.status === "busy"
+                  ? "방해 금지"
+                  : user.status === "away"
+                  ? "자리 비움"
+                  : "오프라인"}
               </span>
             </div>
             <p className="text-sm text-gray-500 mt-2 line-clamp-2">
