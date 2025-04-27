@@ -1,17 +1,17 @@
 "use client";
 
-import { User } from "@/domain/entities/User";
-import { Department } from "@/domain/entities/Department";
-import { Position } from "@/domain/entities/Position";
+import { UserListDto } from "@/application/usecases/user/dto/UserListDto";
+import { DepartmentDto } from "@/application/usecases/admin/dto/DepartmentDto";
+import { PositionDto } from "@/application/usecases/admin/dto/PositionDto";
 
 interface UserTableProps {
-  users: User[];
-  departments: Department[];
-  positions: Position[];
+  users: UserListDto[];
+  departments: DepartmentDto[];
+  positions: PositionDto[];
   onResetPassword: (userId: string) => void;
   onToggleLock: (userId: string, currentStatus: boolean) => void;
   onDeleteUser: (userId: string) => void;
-  onEditUser: (user: User) => void;
+  onEditUser: (user: UserListDto) => void;
 }
 
 export default function UserTable({ 
@@ -24,9 +24,9 @@ export default function UserTable({
   onEditUser
 }: UserTableProps) {
   
-  const formatDate = (date: Date | undefined | string) => {
+  const formatDate = (date: string | undefined) => {
     if (!date) return "-";
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    const dateObj = new Date(date);
     return dateObj.toLocaleDateString("ko-KR", {
       year: "numeric",
       month: "2-digit",

@@ -39,7 +39,7 @@ function getTokenData(token: string) {
       userId: string;
       username: string;
       roleId: string;
-      businessNumber?: string; // businessNumber도 포함
+      businessNumber?: string;
     };
   } catch (error) {
     console.error("토큰 검증 오류:", error);
@@ -47,57 +47,6 @@ function getTokenData(token: string) {
   }
 }
 
-// GET 핸들러 (부서 목록 조회)
-// export async function GET(request: NextRequest) {
-//   try {
-//     // 현재 사용자 정보 가져오기
-//     const currentUserResponse = await fetch(
-//       `${request.nextUrl.origin}/api/auth/me`,
-//       {
-//         headers: request.headers,
-//       }
-//     );
-
-//     if (!currentUserResponse.ok) {
-//       return NextResponse.json(
-//         { error: "인증되지 않은 사용자입니다" },
-//         { status: 401 }
-//       );
-//     }
-
-//     const userData = await currentUserResponse.json();
-//     const companyId = userData.user.businessNumber;
-
-//     if (!companyId) {
-//       return NextResponse.json(
-//         { error: "회사 정보를 찾을 수 없습니다" },
-//         { status: 400 }
-//       );
-//     }
-
-//     // 부서 저장소 초기화
-//     const departmentRepository = new SbDepartmentRepository();
-
-//     // 해당 회사의 부서 가져오기
-//     const departments = await departmentRepository.getAllByCompany(companyId);
-
-//     // 응답 데이터 형식 변환
-//     const formattedDepartments = departments.map(dept => ({
-//       id: dept.id,
-//       departmentName: dept.departmentName,
-//       createdAt: dept.createdAt,
-//       companyId: dept.company_id
-//     }));
-
-//     return NextResponse.json(formattedDepartments);
-//   } catch (error: unknown) {
-//     console.error("부서 목록 조회 중 오류 발생:", error);
-//     return NextResponse.json(
-//       { error: getErrorMessage(error) || "부서 목록을 불러오는데 실패했습니다" },
-//       { status: 500 }
-//     );
-//   }
-// }
 export async function GET(request: NextRequest) {
   try {
     // 쿠키에서 토큰 가져오기

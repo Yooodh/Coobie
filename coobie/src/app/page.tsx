@@ -1,3 +1,4 @@
+// src/app/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -10,6 +11,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
+  const [isLocked, setIsLocked] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,8 +36,26 @@ export default function LoginPage() {
       console.log("로그인 응답:", data);
 
       if (!response.ok) {
-        throw new Error(data.error || "로그인에 실패했습니다");
+        const errorMessage = data.error || "로그인에 실패했습니다";
+        
+        // 계정 잠금 상태 확인
+        if (errorMessage.includes("계정이 잠겨") || errorMessage.includes("계정이 잠금")) {
+          setIsLocked(true);
+        } 
+        // 남은 시도 횟수 파싱
+        else if (errorMessage.includes("남은 시도 횟수:")) {
+          const match = errorMessage.match(/남은 시도 횟수: (\d+)회/);
+          if (match && match[1]) {
+            setRemainingAttempts(parseInt(match[1]));
+          }
+        }
+        
+        throw new Error(errorMessage);
       }
+
+      // 성공적인 로그인 - 남은 시도 횟수 초기화
+      setRemainingAttempts(null);
+      setIsLocked(false);
 
       // 리다이렉션 전 알림 추가
       alert("로그인 성공! 페이지 이동 중...");
@@ -56,6 +77,22 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 비밀번호 입력 필드 스타일 - 남은 시도 횟수에 따라 변경
+  const getPasswordFieldStyle = () => {
+    if (isLocked) {
+      return "border-red-500 bg-red-50";
+    }
+    if (remainingAttempts !== null) {
+      if (remainingAttempts <= 1) {
+        return "border-red-500 bg-red-50"; // 위험
+      } else if (remainingAttempts <= 2) {
+        return "border-orange-500 bg-orange-50"; // 경고
+      }
+      return "border-yellow-300 bg-yellow-50"; // 주의
+    }
+    return "border-gray-300"; // 기본
   };
 
   return (
@@ -82,6 +119,16 @@ export default function LoginPage() {
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
             {error}
+            {isLocked && (
+              <p className="mt-2 font-semibold">
+                계정이 잠겼습니다. 관리자에게 비밀번호 초기화를 요청하세요.
+              </p>
+            )}
+            {!isLocked && remainingAttempts !== null && remainingAttempts <= 2 && (
+              <p className="mt-2 font-semibold">
+                주의: {remainingAttempts}회 더 실패하면 계정이 잠깁니다!
+              </p>
+            )}
           </div>
         )}
 
@@ -101,6 +148,7 @@ export default function LoginPage() {
                 onChange={(e) => setUsername(e.target.value)}
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-amber-500 focus:border-amber-500 focus:z-10 sm:text-sm"
                 placeholder="아이디"
+                disabled={isLocked || loading}
               />
             </div>
             <div>
@@ -115,8 +163,9 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-amber-500 focus:border-amber-500 focus:z-10 sm:text-sm"
+                className={`appearance-none rounded-none relative block w-full px-3 py-2 border placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-amber-500 focus:border-amber-500 focus:z-10 sm:text-sm ${getPasswordFieldStyle()}`}
                 placeholder="비밀번호"
+                disabled={isLocked || loading}
               />
             </div>
           </div>
@@ -150,12 +199,12 @@ export default function LoginPage() {
           <div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || isLocked}
               className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-amber-500 hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 ${
-                loading ? "opacity-70 cursor-not-allowed" : ""
+                (loading || isLocked) ? "opacity-70 cursor-not-allowed" : ""
               }`}
             >
-              {loading ? "로그인 중..." : "로그인"}
+              {loading ? "로그인 중..." : isLocked ? "계정이 잠겼습니다" : "로그인"}
             </button>
           </div>
         </form>

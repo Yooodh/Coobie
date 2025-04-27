@@ -1,18 +1,17 @@
-// src/app/components/admin/UserModal.tsx
 "use client";
 
 import { useState, useEffect } from "react";
-import { User } from "@/domain/entities/User";
-import { Department } from "@/domain/entities/Department";
-import { Position } from "@/domain/entities/Position";
+import { UserListDto } from "@/application/usecases/user/dto/UserListDto";
+import { DepartmentDto } from "@/application/usecases/admin/dto/DepartmentDto";
+import { PositionDto } from "@/application/usecases/admin/dto/PositionDto";
 
 interface UserModalProps {
-  user: User | null;
+  user: UserListDto | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (updatedUser: Partial<User>) => Promise<void>;
-  departments: Department[];
-  positions: Position[];
+  onSave: (updatedUser: Partial<UserListDto>) => Promise<void>;
+  departments: DepartmentDto[];
+  positions: PositionDto[];
 }
 
 export default function UserModal({
@@ -23,7 +22,7 @@ export default function UserModal({
   departments,
   positions,
 }: UserModalProps) {
-  const [formData, setFormData] = useState<Partial<User>>({});
+  const [formData, setFormData] = useState<Partial<UserListDto>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,15 +65,20 @@ export default function UserModal({
     setError(null);
 
     try {
-      await onSave({
+      const updatedFormData: Partial<UserListDto> = {
         ...formData,
-        departmentId: formData.departmentId
-          ? Number(formData.departmentId)
-          : undefined,
-        positionId: formData.positionId
-          ? Number(formData.positionId)
-          : undefined,
-      });
+      };
+
+      // 숫자 타입으로 변환
+      if (formData.departmentId) {
+        updatedFormData.departmentId = Number(formData.departmentId);
+      }
+
+      if (formData.positionId) {
+        updatedFormData.positionId = Number(formData.positionId);
+      }
+
+      await onSave(updatedFormData);
       onClose();
     } catch (err: unknown) {
       setError(
@@ -160,13 +164,13 @@ export default function UserModal({
               </label>
               <select
                 name="departmentId"
-                value={formData.departmentId || ""}
+                value={formData.departmentId?.toString() || ""}
                 onChange={handleChange}
                 className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">선택하세요</option>
                 {departments.map((dept) => (
-                  <option key={dept.id} value={dept.id}>
+                  <option key={dept.id} value={dept.id.toString()}>
                     {dept.departmentName}
                   </option>
                 ))}
@@ -180,13 +184,13 @@ export default function UserModal({
               </label>
               <select
                 name="positionId"
-                value={formData.positionId || ""}
+                value={formData.positionId?.toString() || ""}
                 onChange={handleChange}
                 className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">선택하세요</option>
                 {positions.map((pos) => (
-                  <option key={pos.id} value={pos.id}>
+                  <option key={pos.id} value={pos.id.toString()}>
                     {pos.positionName}
                   </option>
                 ))}

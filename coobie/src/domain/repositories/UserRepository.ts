@@ -12,6 +12,7 @@ export interface UserRepository {
   delete(id: string): Promise<void>;
   resetPassword(id: string, defaultPassword: string): Promise<void>;
   updateLockStatus(id: string, isLocked: boolean): Promise<void>;
+  updatePassword(id: string, newPassword: string): Promise<void>;
 
   // 로그인 관련
   incrementLoginAttempts(id: string): Promise<number>;
