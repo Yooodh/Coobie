@@ -155,7 +155,7 @@ const Chart: React.FC<ChartProps> = ({
         ${isOver ? "bg-blue-100 border-blue-300" : "bg-white"}`}
     >
       {/* 상단 날짜 표시 */}
-      <div className="text-center p-2 border-b border-gray-200 text-lg font-medium text-gray-400">
+      <div className="text-center p-2 border-b border-gray-200 text-lg font-medium text-white select-none bg-[#edba60]">
         {formatDate(date)}
       </div>
 
@@ -169,7 +169,7 @@ const Chart: React.FC<ChartProps> = ({
         {timeLabels.map((hour, index) => (
           <div
             key={hour}
-            className={`absolute w-full h-[60px] border-t border-gray-200 flex items-center
+            className={`absolute w-full h-[60px] border-t border-gray-200 flex items-center select-none"
               ${
                 index === timeLabels.length - 1
                   ? "border-b border-gray-200"
@@ -177,7 +177,7 @@ const Chart: React.FC<ChartProps> = ({
               }`}
             style={{ top: `${index * 60}px` }}
           >
-            <span className="text-sm pl-2 text-gray-400">
+            <span className="text-sm pl-2 text-gray-400 select-none font-medium">
               {hour < 12
                 ? `오전 ${hour}`
                 : `오후 ${hour === 12 ? 12 : hour - 12}`}{" "}
