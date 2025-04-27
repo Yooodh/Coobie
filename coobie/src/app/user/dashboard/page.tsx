@@ -1,4 +1,3 @@
-// src/app/user/dashboard/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,6 +5,7 @@ import { useRouter } from "next/navigation";
 import UserCard from "@/app/components/user/UserCard";
 import Header from "@/app/components/common/Header";
 import { UserDto } from "@/application/usecases/user/dto/UserDto";
+import { DepartmentDto, PositionDto } from "@/application/usecases/dto";
 
 export default function UserDashboard() {
   const router = useRouter();
@@ -15,82 +15,112 @@ export default function UserDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userStatus, setUserStatus] = useState<
+    "online" | "offline" | "busy" | "away"
+  >("offline");
 
-  // 유저 정보 받아오기
+  const [departments, setDepartments] = useState<DepartmentDto[]>([]);
+  const [positions, setPositions] = useState<PositionDto[]>([]);
+
+  const getDepartmentName = (deptId?: number) => {
+    if (!deptId) return undefined;
+    const dept = departments.find((d) => d.id === deptId);
+    return dept?.departmentName;
+  };
+
+  const getPositionName = (posId?: number) => {
+    if (!posId) return undefined;
+    const pos = positions.find((p) => p.id === posId);
+    return pos?.positionName;
+  };
+
+  const fetchUsers = async () => {
+
+    try {
+      if (!currentUser?.businessNumber) return;
+
+      const usersResponse = await fetch(
+        `/api/users?roleId=02&businessNumber=${currentUser.businessNumber}&limit=1000`
+      );
+      if (!usersResponse.ok) {
+        throw new Error("사용자 목록을 불러오는데 실패했습니다");
+      }
+      const usersData = await usersResponse.json();
+
+      const userDtos = usersData.users.map((user: UserDto) => ({
+        id: user.id,
+        username: user.username,
+        nickname: user.nickname,
+        departmentId: user.departmentId,
+        positionId: user.positionId,
+        departmentName: getDepartmentName(user.departmentId),
+        positionName: getPositionName(user.positionId),
+        status: user.status || "offline",
+        profileMessage: user.profileMessage,
+      }));
+
+      const filteredUserDtos = userDtos.filter((user: UserDto)=>user.id !== currentUser.id)
+
+      setUsers(filteredUserDtos);
+      setFilteredUsers(filteredUserDtos);
+      console.log("유저 페칭:", filteredUserDtos.length, "명");
+    } catch (err) {
+      console.error("사용자 목록 업데이트 중 오류 발생:", err);
+    }
+    
+  };
+
+  // 초기 데이터 로딩
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        // 현재 사용자 정보 가져오기
         const currentUserResponse = await fetch("/api/auth/me");
         if (!currentUserResponse.ok) {
           throw new Error("사용자 정보를 불러오는데 실패했습니다");
         }
         const currentUserData = await currentUserResponse.json();
 
-        // 부서 및 직급 정보 가져오기
         const [departmentsResponse, positionsResponse] = await Promise.all([
           fetch("/api/departments"),
           fetch("/api/positions"),
         ]);
 
-        const departments = departmentsResponse.ok
+        const departmentsData = departmentsResponse.ok
           ? await departmentsResponse.json()
           : [];
-        const positions = positionsResponse.ok
+        const positionsData = positionsResponse.ok
           ? await positionsResponse.json()
           : [];
 
-        // 사용자 목록 가져오기 (같은 회사 소속의 일반 사용자들)
-        const usersResponse = await fetch(
-          `/api/users?roleId=02&businessNumber=${currentUserData.user.businessNumber}`
-        );
-        if (!usersResponse.ok) {
-          throw new Error("사용자 목록을 불러오는데 실패했습니다");
-        }
-        const usersData = await usersResponse.json();
+        setDepartments(departmentsData);
+        setPositions(positionsData);
 
-        // 부서명과 직급명 매핑 함수
-        const getDepartmentName = (deptId?: number) => {
-          if (!deptId) return undefined;
-          const dept = departments.find((d: any) => d.id === deptId);
-          return dept?.departmentName;
-        };
-
-        const getPositionName = (posId?: number) => {
-          if (!posId) return undefined;
-          const pos = positions.find((p: any) => p.id === posId);
-          return pos?.positionName;
-        };
-
-        // User 엔티티에서 UserDto로 변환
-        const userDtos = usersData.users.map((user: any) => ({
-          id: user.id,
-          username: user.username,
-          nickname: user.nickname,
-          departmentId: user.departmentId,
-          positionId: user.positionId,
-          departmentName: getDepartmentName(user.departmentId),
-          positionName: getPositionName(user.positionId),
-        }));
-
-        // 현재 사용자도 Dto로 변환
         const currentUserDto: UserDto = {
           id: currentUserData.user.id,
           username: currentUserData.user.username,
           nickname: currentUserData.user.nickname,
           departmentId: currentUserData.user.departmentId,
           positionId: currentUserData.user.positionId,
-          departmentName: getDepartmentName(currentUserData.user.departmentId),
-          positionName: getPositionName(currentUserData.user.positionId),
+          departmentName: departmentsData.find(
+            (d: DepartmentDto) => d.id === currentUserData.user.departmentId
+          )?.departmentName,
+          positionName: positionsData.find(
+            (p: PositionDto) => p.id === currentUserData.user.positionId
+          )?.positionName,
+          status: currentUserData.user.status || "online",
+          businessNumber: currentUserData.user.businessNumber,
         };
 
         setCurrentUser(currentUserDto);
-        setUsers(userDtos);
-        setFilteredUsers(userDtos);
-      } catch (err: any) {
-        setError(err.message || "데이터를 불러오는 중 오류가 발생했습니다");
+        console.log("currentUser 세팅 완료:", currentUserDto);
+
+        setUserStatus(currentUserDto.status || "online");
+      } catch (err) {
+        if (err instanceof Error) {
+          setError(err.message || "데이터를 불러오는 중 오류가 발생했습니다");
+        }
       } finally {
         setLoading(false);
       }
@@ -99,7 +129,25 @@ export default function UserDashboard() {
     fetchData();
   }, []);
 
-  // 검색어에 따른 사용자 필터링
+  // currentUser가 준비된 후 사용자 목록 가져오기
+  useEffect(() => {
+    if (!currentUser) return;
+    fetchUsers();
+    
+  }, [currentUser]);
+
+  // 주기적으로 사용자 목록 업데이트
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const intervalId = setInterval(() => {
+      fetchUsers();
+    }, 30000); // 30초마다
+
+    return () => clearInterval(intervalId);
+  }, [currentUser]);
+
+  // 검색어 변경시 필터링
   useEffect(() => {
     if (searchTerm.trim() === "") {
       setFilteredUsers(users);
@@ -116,15 +164,30 @@ export default function UserDashboard() {
     setFilteredUsers(filtered);
   }, [searchTerm, users]);
 
-  // 로그아웃 처리
-  const handleLogout = async () => {
+  const handleStatusChange = async (
+    newStatus: "online" | "offline" | "busy" | "away"
+  ) => {
     try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
+      setUserStatus(newStatus);
+
+      const response = await fetch("/api/users/status", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: newStatus }),
       });
-      router.push("/");
+
+      if (!response.ok) {
+        throw new Error("상태 변경에 실패했습니다");
+      }
+
+      setCurrentUser((prev) => (prev ? { ...prev, status: newStatus } : null));
     } catch (err) {
-      console.error("로그아웃 중 오류가 발생했습니다:", err);
+      console.error("상태 변경 중 오류 발생:", err);
+      if (currentUser?.status) {
+        setUserStatus(currentUser.status);
+      }
     }
   };
 
@@ -141,10 +204,13 @@ export default function UserDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 헤더 */}
-      <Header username={currentUser?.nickname} />
+      <Header
+        username={currentUser?.nickname}
+        userId={currentUser?.id}
+        userStatus={userStatus}
+        onStatusChange={handleStatusChange}
+      />
 
-      {/* 메인 콘텐츠 */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6">
@@ -181,7 +247,7 @@ export default function UserDashboard() {
           </div>
         </div>
 
-        {/* 사용자 카드 그리드 */}
+        {/* 사용자 카드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredUsers.length === 0 ? (
             <div className="col-span-full text-center py-12 text-gray-500">
@@ -192,16 +258,6 @@ export default function UserDashboard() {
           )}
         </div>
       </main>
-
-      {/* 로그아웃 버튼 */}
-      <div className="fixed top-6 right-6">
-        <button
-          onClick={handleLogout}
-          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-        >
-          로그아웃
-        </button>
-      </div>
     </div>
   );
 }

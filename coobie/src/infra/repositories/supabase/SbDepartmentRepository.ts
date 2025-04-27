@@ -1,9 +1,10 @@
 import { Department } from "@/domain/entities/Department";
 import { DepartmentRepository } from "@/domain/repositories/DepartmentRepository";
 import { createBrowserSupabaseClient } from "@/utils/supabase/client";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 export class SbDepartmentRepository implements DepartmentRepository {
-  private supabase: any;
+  private supabase: SupabaseClient;
 
   constructor() {
     this.supabase = createBrowserSupabaseClient();
@@ -11,7 +12,7 @@ export class SbDepartmentRepository implements DepartmentRepository {
 
   async getAllByCompany(businessNumber: string): Promise<Department[]> {
     try {
-      console.log(`부서 조회 시작: businessNumber=${businessNumber}`);
+      console.log(`부서 조회 시작: bu sinessNumber=${businessNumber}`);
 
       // 1. business_number로 사용자(관리자) 찾기
       const { data: userData, error: userError } = await this.supabase
@@ -182,14 +183,52 @@ export class SbDepartmentRepository implements DepartmentRepository {
   }
 
   async delete(id: number): Promise<void> {
-    // 소프트 삭제 방식 (deleted_at 필드 업데이트)
-    const { error } = await this.supabase
-      .from("department")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("ID", id);
+    try {
+      // 부서 존재 여부 확인
+      const { data: existingDept, error: checkError } = await this.supabase
+        .from("department")
+        .select("*")
+        .eq("ID", id)
+        .is("deleted_at", null)
+        .maybeSingle();
 
-    if (error) {
-      throw new Error(`부서 삭제 중 오류: ${error.message}`);
+      if (checkError) {
+        throw new Error(`부서 조회 중 오류: ${checkError.message}`);
+      }
+
+      if (!existingDept) {
+        throw new Error(`ID가 ${id}인 부서를 찾을 수 없습니다`);
+      }
+
+      // 해당 부서를 사용 중인 사용자가 있는지 확인
+      const { count: userCount, error: countError } = await this.supabase
+        .from("user")
+        .select("*", { count: "exact", head: true })
+        .eq("department_id", id)
+        .is("deleted_at", null);
+
+      if (countError) {
+        throw new Error(`부서 사용 여부 확인 중 오류: ${countError.message}`);
+      }
+
+      if (userCount && userCount > 0) {
+        throw new Error(
+          `현재 ${userCount}명의 사용자가 이 부서에 소속되어 있어 삭제할 수 없습니다`
+        );
+      }
+
+      // 소프트 삭제 방식 (deleted_at 필드 업데이트)
+      const { error } = await this.supabase
+        .from("department")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("ID", id);
+
+      if (error) {
+        throw new Error(`부서 삭제 중 오류: ${error.message}`);
+      }
+    } catch (error) {
+      console.error(`부서 ID ${id} 삭제 중 오류:`, error);
+      throw error;
     }
   }
 }
