@@ -32,15 +32,12 @@ export async function createScheduleUseCase(
 
     const newSchedule = new Schedule(
       0, // DB에서 자동 생성될 ID
-
-      // input.userId,
-      "37002d5e-1c5d-4797-8190-dc2adeea2637",
+      input.userId, // 하드코딩된 값 제거하고 입력값 사용
       input.startedAt,
       input.endedAt,
       input.date,
       null, // deletedAt
       input.scheduleCategoryId
-      // name, isTemporary 등 불필요한 인자 제거
     );
 
     const createdSchedule = await repository.createSchedule(newSchedule);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SbUserRepository } from "@/infra/repositories/supabase/SbUserRepository";
-import { GetUserUseCase } from "@/application/usecases/user/GetUserUseCase";
+import { GetUserUseCase } from "@/application/usecases/user/GetUserUsecase";
 import { UpdateUserUseCase } from "@/application/usecases/user/UpdateUserUseCase";
 import { DeleteUserUseCase } from "@/application/usecases/user/DeleteUserUseCase";
 
@@ -36,10 +36,11 @@ function getErrorMessage(error: unknown): string {
 // GET 핸들러 (단일 사용자 조회)
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  // { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
-    const userId = params.id;
+    const userId = context.params.id;
 
     // 저장소 및 유스케이스 초기화
     const userRepository = new SbUserRepository();
@@ -57,7 +58,10 @@ export async function GET(
 
     return NextResponse.json(user);
   } catch (error: unknown) {
-    console.error(`사용자 조회 중 오류 발생 (ID: ${params.id}):`, error);
+    console.error(
+      `사용자 조회 중 오류 발생 (ID: ${context.params.id}):`,
+      error
+    );
     return NextResponse.json(
       {
         error:
@@ -71,10 +75,11 @@ export async function GET(
 // PATCH 핸들러 (사용자 정보 업데이트)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  // { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
-    const userId = params.id;
+    const userId = context.params.id;
     const body = await request.json();
 
     // URL의 ID로 업데이트 데이터 설정
@@ -89,7 +94,10 @@ export async function PATCH(
 
     return NextResponse.json(updatedUser);
   } catch (error: unknown) {
-    console.error(`사용자 업데이트 중 오류 발생 (ID: ${params.id}):`, error);
+    console.error(
+      `사용자 업데이트 중 오류 발생 (ID: ${context.params.id}):`,
+      error
+    );
     return NextResponse.json(
       {
         error: getErrorMessage(error) || "사용자 정보 업데이트에 실패했습니다",
@@ -102,10 +110,11 @@ export async function PATCH(
 // DELETE 핸들러 (사용자 삭제)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  // { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
-    const userId = params.id;
+    const userId = context.params.id;
 
     // 저장소 및 유스케이스 초기화
     const userRepository = new SbUserRepository();
@@ -118,7 +127,10 @@ export async function DELETE(
       message: `ID가 ${userId}인 사용자가 성공적으로 삭제되었습니다`,
     });
   } catch (error: unknown) {
-    console.error(`사용자 삭제 중 오류 발생 (ID: ${params.id}):`, error);
+    console.error(
+      `사용자 삭제 중 오류 발생 (ID: ${context.params.id}):`,
+      error
+    );
     return NextResponse.json(
       { error: getErrorMessage(error) || "사용자 삭제에 실패했습니다" },
       { status: 500 }

@@ -5,6 +5,12 @@ import { verify } from "jsonwebtoken";
 import { SbUserRepository } from "@/infra/repositories/supabase/SbUserRepository";
 import { AuthUserDto } from "@/application/usecases/auth/dto/AuthUserDto";
 
+// Dto 확장 했습니다 : Yoo
+interface ExtendedAuthUserDto extends AuthUserDto {
+  departmentId?: number;
+  positionId?: number;
+}
+
 // 토큰에서 사용자 정보 추출
 function getTokenData(token: string) {
   try {
@@ -52,14 +58,23 @@ export async function GET(request: NextRequest) {
     }
 
     // AuthUserDto로 변환하여 반환
-    const authUser: AuthUserDto = {
+    // const authUser: AuthUserDto = {
+    //   id: user.id,
+    //   username: user.username,
+    //   nickname: user.nickname,
+    //   roleId: user.roleId,
+    //   businessNumber: user.businessNumber,
+    // };
+
+    // Dto 확장 했습니다 : Yoo
+    const authUser: ExtendedAuthUserDto = {
       id: user.id,
       username: user.username,
       nickname: user.nickname,
       roleId: user.roleId,
       businessNumber: user.businessNumber,
       departmentId: user.departmentId,
-      positionId: user.positionId,    
+      positionId: user.positionId,
     };
 
     return NextResponse.json({
