@@ -1,6 +1,6 @@
 "use client";
 import { ProfileType } from "@/types/ScheduleType";
-import Image from "next/image";
+import ProfileImage from "@/app/components/common/ProfileImage";
 
 interface ProfileContainerProps {
   profile?: ProfileType;
@@ -21,27 +21,23 @@ const ProfileContainer: React.FC<ProfileContainerProps> = ({ profile }) => {
   }
 
   return (
-    <div className="flex items-center space-x-4">
-      {/* 아바타 이미지 */}
-      {/* <Image
-        src={profile.avatar}
-        alt={profile.name}
-        width={112}
-        height={112}
-        className="w-28 h-28 rounded-lg object-cover shadow-md"
-        onError={(e) => {
-          (e.target as HTMLImageElement).src = "/default-avatar.png";
-        }}
-      /> */}
+    <div className="flex items-center space-x-5">
+      <ProfileImage userId={profile.id} size={64} />
       <div>
-        <h2 className="text-2xl font-bold">
+        <h2 className="text-2xl font-bold select-none">
           {profile.nickname || profile.name}
         </h2>
+        <div className="text-gray-600 select-none mt-2">
+          <p>
+            <span className="font-semibold">소속:</span>{" "}
+            {profile.department || "소속 미지정"}
+          </p>
 
-        <p className="text-gray-600">
-          소속: {profile.department || "정보 없음"}
-        </p>
-        <p className="text-gray-500">직급: {profile.position || "정보 없음"}</p>
+          <p>
+            <span className="font-semibold">직급: </span>
+            {profile.position || "직급 미지정"}
+          </p>
+        </div>
       </div>
     </div>
   );

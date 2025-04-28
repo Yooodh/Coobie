@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SbUserRepository } from "@/infra/repositories/supabase/SbUserRepository";
-import { GetUserUseCase } from "@/application/usecases/user/GetUserUseCase";
+import { GetUserUseCase } from "@/application/usecases/user/GetUserUsecase";
 import { UpdateUserUseCase } from "@/application/usecases/user/UpdateUserUseCase";
 import { DeleteUserUseCase } from "@/application/usecases/user/DeleteUserUseCase";
 
@@ -33,7 +33,6 @@ function getErrorMessage(error: unknown): string {
   return toErrorWithMessage(error).message;
 }
 
-
 export async function GET(
   request: NextRequest,
   context: Promise<{ params: { id: string } }>
@@ -65,7 +64,6 @@ export async function GET(
   }
 }
 
-
 export async function PATCH(
   request: NextRequest,
   context: Promise<{ params: { id: string } }>
@@ -91,7 +89,6 @@ export async function PATCH(
     );
   }
 }
-
 
 export async function DELETE(
   request: NextRequest,
