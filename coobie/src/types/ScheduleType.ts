@@ -10,9 +10,11 @@ export interface BlockType {
 
 export interface ProfileType {
   id: string;
-  name: string;
   nickname?: string;
-  position: string;
-  department: string;
-  avatar: string;
+  name: string;
+  department?: string; // 부서명
+  departmentId?: number; // 부서 ID (있다면)
+  position?: string; // 직급명
+  positionId?: number; // 직급 ID (있다면)
+  profileImageUrl?: string; // 프로필 이미지 URL
 }
