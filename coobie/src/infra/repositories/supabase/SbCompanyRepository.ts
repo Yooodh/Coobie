@@ -53,7 +53,7 @@ export class SbCompanyRepository implements CompanyRepository {
     }
 
     // 회사 ID와 관련된 사용자 데이터 가져오기
-    const userIds = companies.map((company) => company.user_id).filter(Boolean);
+    const userIds = companies.map(company => company.user_id).filter(Boolean);
 
     if (userIds.length === 0) {
       return [];
@@ -70,8 +70,8 @@ export class SbCompanyRepository implements CompanyRepository {
 
     // 회사 데이터와 사용자 데이터 병합
     const result = companies
-      .map((company) => {
-        const user = users.find((u) => u.ID === company.user_id) || {};
+      .map(company => {
+        const user = users.find(u => u.ID === company.user_id) || {};
 
         if (
           filter?.isApproved !== undefined &&
@@ -325,48 +325,48 @@ export class SbCompanyRepository implements CompanyRepository {
   async resetPassword(id: string, defaultPassword: string): Promise<void> {
     try {
       const supabase = await createBrowserSupabaseClient();
-  
+
       // 회사 정보 조회 (user_id 컬럼을 이용하여 관리자 ID 직접 가져오기)
       const { data: companyData, error: companyError } = await supabase
         .from("company")
         .select("user_id")
         .eq("ID", id)
         .single();
-  
+
       if (companyError) {
         throw new Error(
           `회사 정보를 가져오는 중 오류 발생 (ID: ${id}): ${companyError.message}`
         );
       }
-  
+
       if (!companyData || !companyData.user_id) {
         throw new Error(`회사 관리자 정보를 찾을 수 없습니다 (회사 ID: ${id})`);
       }
-  
+
       // 관리자 ID를 직접 사용하여 비밀번호 초기화 및 잠금 해제
       const adminId = companyData.user_id;
-  
+
       // 관리자 비밀번호 초기화 및 잠금 해제를 항상 함께 수행
       const { error: updateError } = await supabase
         .from("user")
         .update({
           password: defaultPassword,
-          is_locked: false,         // 항상 잠금 해제
-          login_attempts: 0,        // 로그인 시도 횟수 초기화
+          is_locked: false, // 항상 잠금 해제
+          login_attempts: 0, // 로그인 시도 횟수 초기화
         })
         .eq("ID", adminId);
-  
+
       if (updateError) {
         throw new Error(
           `관리자 비밀번호 초기화 중 오류 발생 (ID: ${adminId}): ${updateError.message}`
         );
       }
-      
+
       const { error: companyUpdateError } = await supabase
         .from("company")
         .update({ is_locked: false })
         .eq("ID", id);
-        
+
       if (companyUpdateError) {
         throw new Error(
           `회사 잠금 상태 업데이트 중 오류 발생 (ID: ${id}): ${companyUpdateError.message}`
