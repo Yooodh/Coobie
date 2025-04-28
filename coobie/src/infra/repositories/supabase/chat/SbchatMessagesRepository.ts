@@ -1,10 +1,10 @@
 import { Messages } from "@/domain/entities/chat/Messages";
-import { createClient } from "@/utils/supabase/server";
+import { createServerSupabaseClient } from "@/utils/supabase/server";
 
 export class SbchatMessagesRepository {
   constructor(public sender_id: string, public chat_room_id: string) {}
   async save(message: Messages): Promise<Messages> {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
 
     // Insert into chat_messages table
     const { data: messageData, error: messageError } = await supabase
@@ -43,7 +43,7 @@ export class SbchatMessagesRepository {
   async listenForNewMessages(
     callback: (message: Messages) => void
   ): Promise<void> {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
 
     const channel = supabase
       .channel(`messages:chat_room_id=eq.${this.chat_room_id}`)

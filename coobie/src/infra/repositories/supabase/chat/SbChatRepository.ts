@@ -1,10 +1,10 @@
 import { ChatRoom } from "@/domain/entities/chat/ChatRoom";
 import { ChatRoomRepository } from "@/domain/repositories/chat/ChatRoomRepository";
-import { createClient } from "@/utils/supabase/server";
+import { createServerSupabaseClient } from "@/utils/supabase/server";
 
 export class SbChatRoomRepository implements ChatRoomRepository {
   async createRoom(chatRoom: ChatRoom): Promise<ChatRoom> {
-    const supabase = await createClient();
+    const supabase = await createServerSupabaseClient();
 
     const { data: existingMember, error: fetchError } = await supabase
       .from("chat_rooms")
@@ -17,9 +17,9 @@ export class SbChatRoomRepository implements ChatRoomRepository {
       throw new Error(fetchError.message);
     }
 
-    // if (existingMember) {
-    //   throw new Error("Member already exists in the chat room.");
-    // }
+    if (existingMember) {
+      throw new Error("Member already exists in the chat room.");
+    }
     // Insert into chat_rooms table
     const { data: chatRoomData, error: chatRoomError } = await supabase
       .from("chat_rooms")
@@ -33,7 +33,12 @@ export class SbChatRoomRepository implements ChatRoomRepository {
       .maybeSingle(); // Use maybeSingle to handle cases where no rows are found gracefully
 
     return {
-      ...chatRoomData,
+      // ...chatRoomData,
+      id: chatRoomData.ID,
+      userId: chatRoomData.user_id,
+      isGroup: chatRoomData.is_group,
+      name: chatRoomData.name,
+      createdAt: chatRoomData.created_at,
     } as ChatRoom;
   }
 }
