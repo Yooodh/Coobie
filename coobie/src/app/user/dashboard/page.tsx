@@ -139,7 +139,7 @@ export default function UserDashboard() {
 
     const intervalId = setInterval(() => {
       fetchUsers();
-    }, 30000); // 30초마다
+    }, 30000); // 300초마다
 
     return () => clearInterval(intervalId);
   }, [currentUser]);
