@@ -244,17 +244,17 @@ export default function ScheduleViewerPage({
         <button
           onClick={handleSave}
           className="
-          fixed bottom-22 right-9 z-50
+          fixed bottom-21 right-8 z-50
           flex items-center justify-center
           bg-blue-500 text-white font-semibold text-base
-          px-8 py-2 rounded-full
+          px-9 py-3 rounded-full
           border border-blue-100
           shadow-lg
           transition-all duration-150
          hover:bg-blue-600 hover:text-white hover:shadow-xl hover:-translate-y-0.5
           active:scale-95
           cursor-pointer
-          gap-1
+          
     "
           style={{
             letterSpacing: "0.05em",
