@@ -2,14 +2,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SbCompanyRepository } from "@/infra/repositories/supabase/SbCompanyRepository";
 import { SbUserRepository } from "@/infra/repositories/supabase/SbUserRepository";
-// import { RegisterCompanyUseCase } from "@/application/usecases/auth/RegisterCompanyUseCase";
+import { RegisterCompanyUseCase } from "@/application/usecases/auth/RegisterCompanyUseCase";
 
 export async function POST(request: NextRequest) {
   try {
-    const { companyName, businessNumber, username, nickname, password } = await request.json();
+    const { companyName, businessNumber, username, nickname, password } =
+      await request.json();
 
     // 필수 필드 검증
-    if (!companyName || !businessNumber || !username || !nickname || !password) {
+    if (
+      !companyName ||
+      !businessNumber ||
+      !username ||
+      !nickname ||
+      !password
+    ) {
       return NextResponse.json(
         { error: "모든 필수 항목을 입력해주세요" },
         { status: 400 }
@@ -42,20 +49,24 @@ export async function POST(request: NextRequest) {
       password
     );
 
-    return NextResponse.json({
-      message: "회사 가입 신청이 접수되었습니다. 관리자 승인 후 이용 가능합니다.",
-      company: {
-        id: result.company.id,
-        companyName: result.company.companyName,
-        businessNumber: result.company.businessNumber,
+    return NextResponse.json(
+      {
+        message:
+          "회사 가입 신청이 접수되었습니다. 관리자 승인 후 이용 가능합니다.",
+        company: {
+          id: result.company.id,
+          companyName: result.company.companyName,
+          businessNumber: result.company.businessNumber,
+        },
+        adminUser: {
+          id: result.adminUser.id,
+          username: result.adminUser.username,
+          nickname: result.adminUser.nickname,
+        },
       },
-      adminUser: {
-        id: result.adminUser.id,
-        username: result.adminUser.username,
-        nickname: result.adminUser.nickname,
-      }
-    }, { status: 201 });
-  } catch (error: any) {
+      { status: 201 }
+    );
+  } catch (error) {
     console.error("회사 가입 신청 중 오류 발생:", error);
 
     // 특정 오류 처리

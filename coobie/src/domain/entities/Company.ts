@@ -5,6 +5,7 @@ export class Company {
     public isLocked: boolean = false,
     public userId: string,     // 관리자 사용자 ID 참조
     public roleId: string,     // 역할 ID
-    public deletedAt?: Date
+    public deletedAt?: Date,
+    businessNumber?: string
   ) {}
 }
