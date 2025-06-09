@@ -3,6 +3,18 @@ import RoomListCard from "./RoomListCard";
 import profileImg from "../../../../public/images/usr-profile-icon.jpeg";
 
 //채팅 송수신 데이터 fetch request,response
+//채팅룸 데이터(name)들어와야함
+//메세지 데이터created,content) 들어와야함.
+type UserProps = {
+  userData: {
+    id: string;
+    name: string;
+    departmentName: string;
+    positionName: string;
+  }[];
+  onPromptClick: (id: string, name: string) => Promise<void>;
+};
+// { userData, onPromptClick }: UserProps props
 export default function ChatRoomList() {
   return (
     <>
@@ -14,7 +26,10 @@ export default function ChatRoomList() {
             .map(item => {
               return (
                 <>
-                  <RoomListCard>
+                  <RoomListCard
+                  // user={user}
+                  // onPromptClick={({ id, name }) => onPromptClick(id, name)}
+                  >
                     <div className="min-w-[50px] min-h-[50px]">
                       <Image
                         className="rounded-full"
