@@ -1,11 +1,25 @@
 export class ChatMessageDto {
+  senderId: string;
+  chatRoomId: string;
+  content: string;
+  messageType: string;
+  createdAt: Date;
+  fileUrl: string;
+  id?: string;
+
   constructor(
-    public senderId: string,
-    public chatRoomId: string,
-    public content: string,
-    public messageType: string,
-    public createdAt: Date,
-    public fileUrl?: string,
-    public id?: string
-  ) {}
+    senderId: string,
+    chatRoomId: string,
+    content: string,
+    messageType: string,
+    createdAt: Date,
+    fileUrl: string = ""
+  ) {
+    this.senderId = senderId;
+    this.chatRoomId = chatRoomId;
+    this.content = content; // Ensure content is properly assigned
+    this.messageType = messageType;
+    this.createdAt = createdAt;
+    this.fileUrl = fileUrl;
+  }
 }

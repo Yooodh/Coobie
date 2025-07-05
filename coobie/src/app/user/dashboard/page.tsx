@@ -5,6 +5,7 @@ import UserCard from "@/app/components/user/UserCard";
 import Header from "@/app/components/common/Header";
 import { UserDto } from "@/application/usecases/user/dto/UserDto";
 import { DepartmentDto, PositionDto } from "@/application/usecases/dto";
+import Chatting from "@/components/chattings/Chatting";
 
 export default function UserDashboard() {
   const [currentUser, setCurrentUser] = useState<UserDto | null>(null);
@@ -22,13 +23,13 @@ export default function UserDashboard() {
 
   const getDepartmentName = (deptId?: number) => {
     if (!deptId) return undefined;
-    const dept = departments.find((d) => d.id === deptId);
+    const dept = departments.find(d => d.id === deptId);
     return dept?.departmentName;
   };
 
   const getPositionName = (posId?: number) => {
     if (!posId) return undefined;
-    const pos = positions.find((p) => p.id === posId);
+    const pos = positions.find(p => p.id === posId);
     return pos?.positionName;
   };
 
@@ -139,7 +140,7 @@ export default function UserDashboard() {
 
     const intervalId = setInterval(() => {
       fetchUsers();
-    }, 30000); // 30초마다
+    }, 30000); // 300초마다
 
     return () => clearInterval(intervalId);
   }, [currentUser]);
@@ -153,7 +154,7 @@ export default function UserDashboard() {
 
     const lowerSearchTerm = searchTerm.toLowerCase();
     const filtered = users.filter(
-      (user) =>
+      user =>
         user.nickname.toLowerCase().includes(lowerSearchTerm) ||
         user.departmentName?.toLowerCase()?.includes(lowerSearchTerm) ||
         user.positionName?.toLowerCase()?.includes(lowerSearchTerm)
@@ -179,7 +180,7 @@ export default function UserDashboard() {
         throw new Error("상태 변경에 실패했습니다");
       }
 
-      setCurrentUser((prev) => (prev ? { ...prev, status: newStatus } : null));
+      setCurrentUser(prev => (prev ? { ...prev, status: newStatus } : null));
     } catch (err) {
       console.error("상태 변경 중 오류 발생:", err);
       if (currentUser?.status) {
@@ -221,7 +222,7 @@ export default function UserDashboard() {
             <input
               type="text"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value)}
               placeholder="이름, 부서, 직급으로 검색"
               className="flex-grow px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
@@ -251,9 +252,10 @@ export default function UserDashboard() {
               검색 결과가 없습니다
             </div>
           ) : (
-            filteredUsers.map((user) => <UserCard key={user.id} user={user} />)
+            filteredUsers.map(user => <UserCard key={user.id} user={user} />)
           )}
         </div>
+        <Chatting />
       </main>
     </div>
   );

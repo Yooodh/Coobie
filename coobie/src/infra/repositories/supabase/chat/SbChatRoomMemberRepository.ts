@@ -1,17 +1,31 @@
 import { ChatMember } from "@/domain/entities/chat/ChatMember";
 import { ChatRoom } from "@/domain/entities/chat/ChatRoom";
 import { ChatRoomMemberRepository } from "@/domain/repositories/chat/ChatRoomMemberRepository";
-import { createClient } from "@/utils/supabase/server";
+import { createServerSupabaseClient } from "@/utils/supabase/server";
 
 export class SbChatRoomMemberRepository implements ChatRoomMemberRepository {
-  async addMember(chatMember: ChatMember): Promise<ChatMember> {
-    const supabase = await createClient();
+  async chatRoomFindAll(userId: string): Promise<string[]> {
+    const supabase = await createServerSupabaseClient();
+    try {
+      const { data, error } = await supabase
+        .from("chat_room_members")
+        .select("chat_room_id")
+        .eq("user_id", userId);
+      return data ? data.map(item => item.chat_room_id) : [];
+    } catch (error) {
+      console.error(error);
+      return [];
+    }
+
+    // chat_room_id만 배열로 추출
+  }
+  async addMember(chatRoomId: string, userId: string): Promise<ChatMember> {
+    const supabase = await createServerSupabaseClient();
     // 1. 채팅방 존재 여부 확인
     const { data: existingRoom } = await supabase
       .from("chat_rooms")
       .select("*")
-      .eq("ID", chatMember.chatRoomId)
-      .eq("user_id", chatMember.userId)
+      .eq("ID", chatRoomId)
       .maybeSingle();
     console.log(existingRoom);
     // ✅ 채팅방이 없으면 예외 처리
@@ -23,8 +37,8 @@ export class SbChatRoomMemberRepository implements ChatRoomMemberRepository {
     const { data: existingMember, error: fetchError } = await supabase
       .from("chat_room_members")
       .select("*")
-      .eq("user_id", chatMember.userId)
-      .eq("chat_room_id", chatMember.chatRoomId)
+      .eq("user_id", userId)
+      .eq("chat_room_id", chatRoomId)
       .maybeSingle();
 
     if (fetchError) {
@@ -40,8 +54,8 @@ export class SbChatRoomMemberRepository implements ChatRoomMemberRepository {
     const { data, error } = await supabase
       .from("chat_room_members")
       .insert({
-        user_id: chatMember.userId,
-        chat_room_id: chatMember.chatRoomId,
+        user_id: userId,
+        chat_room_id: chatRoomId,
       })
       .select()
       .single();
@@ -52,8 +66,8 @@ export class SbChatRoomMemberRepository implements ChatRoomMemberRepository {
 
     return {
       ...data,
-      user_id: chatMember.userId,
-      chat_room_id: chatMember.chatRoomId,
+      user_id: userId,
+      chat_room_id: chatRoomId,
     } as ChatMember;
   }
 }

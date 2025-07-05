@@ -1,5 +1,6 @@
 import { ChatMember } from "@/domain/entities/chat/ChatMember";
 
 export interface ChatRoomMemberRepository {
-  addMember(member: ChatMember): Promise<ChatMember>;
+  chatRoomFindAll(userId: string): Promise<string[]>;
+  addMember(chatRoomId: string, userId: string): Promise<ChatMember>;
 }
