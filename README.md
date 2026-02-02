@@ -1,6 +1,10 @@
+# <img width="2560" height="1440" alt="coobie_title" src="https://github.com/user-attachments/assets/284f2608-5c2e-4510-9a05-5e8680d3ae2a" />
+
+> **Coobie - 팀의 실시간 상태 확인과 스케줄 관리를 지원하는 B2B SaaS**   
+> 개발 기간 : 2025.04.07 ~ 2025.04.28
+
 <div align="center">
 
-<img src="https://github.com/user-attachments/assets/28953591-41c6-4875-b67c-5e42e3ebfc3c" width="300" />
 <p><i>언제 어디서나 팀과 연결되세요.</i></p>
 
 **Coobie(쿠비)** 는 기업이 직원의 상태와 스케줄을 추적하고 내부 커뮤니케이션을 간소화할 수 있는 종합적인 업무 공간 관리 시스템입니다. 
